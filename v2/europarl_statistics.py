@@ -7,9 +7,9 @@ if __name__ == '__main__':
     datapath = "output/europarl-v7.de-en.de.clean"
 
     lines = e_dl.load_clean_dataset(datapath)
-    log = tensorboardX.SummaryWriter("output/tbX/" + os.path.basename(datapath), max_queue=999, flush_secs=2)
+    log = tensorboardX.SummaryWriter("output/tbX/" + os.path.basename(datapath) + "_9581", max_queue=999, flush_secs=2)
 
-    wordcount = e_dl.count_words(lines)
+    wordcount = e_dl.count_words(lines[4096::200])
 
     numWuedWords = sum(wordcount.values())
     numUniqueWords = len(wordcount)
