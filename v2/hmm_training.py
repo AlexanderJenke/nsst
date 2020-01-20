@@ -72,8 +72,7 @@ if __name__ == '__main__':
     testWordcount = e_dl.count_words(testLines)
 
     # trials
-    for nStates in [10, 25, 50, 100, 1000]:
-        for wct in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 200, 500, 1000]:
+    for nStates in [200, 300, 400, 500]:  # [10, 25, 50, 100, 1000]:
+        for wct in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100]:  # ,0, 200, 500, 1000]:
             name = f"{N_ITER}IT_{len(trainLines)}nTrSet_{nStates}STATES_{wct}WCT"
             trial(wct, nStates, N_ITER, trainLines, testLines, trainWordcount, testWordcount, name)
-
