@@ -7,11 +7,11 @@ import tensorboardX
 
 
 class TbXMonitor(base.ConvergenceMonitor):
-    def __init__(self, tol, n_iter, name, model: base._BaseHMM, testData=None):
+    def __init__(self, tol, n_iter, name, model: base._BaseHMM):
         super(TbXMonitor, self).__init__(tol, n_iter, False)
         self.model = model
         self.log = tensorboardX.SummaryWriter("runs/" + name)
-        self.testData = testData
+        self.iter = 0
 
     def report(self, logprob):
         """Reports to Tesorboard.
@@ -34,13 +34,6 @@ class TbXMonitor(base.ConvergenceMonitor):
         self.log.add_image("emissionprob_",
                            (model.emissionprob_ / model.emissionprob_.max())[None, :, :],
                            global_step=self.iter)
-
-        if self.testData is not None and not self.iter % 10:
-            score = self.model.score(self.testData[0], self.testData[1])
-            self.log.add_scalar("score", score, global_step=self.iter)
-            with open("output/" + name + str(self.iter).zfill(3) + ".pkl", 'wb') as file:
-                pickle.dump(self.model, file)
-
         self.iter += 1
 
 
@@ -94,12 +87,12 @@ if __name__ == '__main__':
     del testLines  # free space
 
     # setup model
-    model = hmm.MultinomialHMM(n_components=n_states, n_iter=n_iter)
+    model = hmm.MultinomialHMM(n_components=n_states, n_iter=10)
     model.n_features = len(trainAlphabet)
     model.transmat_ = np.random.random([model.n_components, model.n_components])
     model.startprob_ = np.asarray([1 / n_states for _ in range(n_states)])
     model.emissionprob_ = np.random.random([model.n_components, model.n_features])
-    model.monitor_ = TbXMonitor(model.tol, model.n_iter, name, model, testData=(Y, len_Y))
+    model.monitor_ = TbXMonitor(model.tol, model.n_iter, name, model)
 
     model.monitor_.log.add_text("Info", f"nLinesX {len(len_X)}")
     model.monitor_.log.add_text("Info", f"nX {len(X)}")
@@ -110,7 +103,16 @@ if __name__ == '__main__':
     model.monitor_.log.add_text("Info", f"nY {len(Y)}")
 
     # train
-    model.fit(X, len_X)
+    for i in range(n_iter//10):
+        model.fit(X, len_X)
+
+        log, model.monitor_.log = model.monitor_.log, None
+        with open("output/" + name + "__" + str(i*10).zfill(3) + ".pkl", 'wb') as file:
+            pickle.dump(model, file)
+        model.monitor_.log = log
+
+        score = model.score(Y, len_Y)
+        model.monitor_.log.add_scalar("score", score, global_step=model.monitor_.iter)
 
     # eval
     test_prob = model.score(Y, len_Y)
