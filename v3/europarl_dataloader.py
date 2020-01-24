@@ -75,6 +75,8 @@ def create_alphabet(wordcount: dict, threshold=None):
 
     i = 1  # next free token (0 is reserved for collection of words by threshold)
     for word in tqdm(wordcount, desc="create alphabet"):
+        if not len(word):  # skip empty word
+            continue
         if threshold is not None and wordcount[word] <= threshold:
             alphabet[word] = 0
         else:
@@ -88,6 +90,8 @@ def create_test_alphabet(train_alphabet: dict, test_wordcount: dict):
     alphabet = train_alphabet
 
     for word in tqdm(test_wordcount, desc="create test alphabet"):
+        if not len(word):  # skip empty word
+            continue
         if word not in alphabet:
             alphabet[word] = 0
 

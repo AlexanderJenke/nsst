@@ -1,10 +1,13 @@
-from hmmlearn import hmm, base
+import hmmlearn
+from hmmlearn import base
+from HMM import MultiThreadFit
 import pickle
 import numpy as np
 from tqdm import tqdm
 import europarl_dataloader as e_dl
 import tensorboardX
 
+assert (hmmlearn.__version__ >= "0.2.3")
 
 class TbXMonitor(base.ConvergenceMonitor):
     def __init__(self, tol, n_iter, name, model: base._BaseHMM):
@@ -38,7 +41,7 @@ class TbXMonitor(base.ConvergenceMonitor):
 
 
 dataset_path = "output/europarl-v7.de-en.de.clean"
-train_step_size = 20  # 10
+train_step_size = 2000  # 10
 threshold = 4  # 5
 n_states = 100
 n_iter = 101
@@ -87,7 +90,7 @@ if __name__ == '__main__':
     del testLines  # free space
 
     # setup model
-    model = hmm.MultinomialHMM(n_components=n_states, n_iter=10)
+    model = MultiThreadFit(n_components=n_states, n_iter=10)
     model.n_features = len(trainAlphabet)
     model.transmat_ = np.random.random([model.n_components, model.n_components])
     model.startprob_ = np.asarray([1 / n_states for _ in range(n_states)])
@@ -96,9 +99,6 @@ if __name__ == '__main__':
 
     model.monitor_.log.add_text("Info", f"nLinesX {len(len_X)}")
     model.monitor_.log.add_text("Info", f"nX {len(X)}")
-    model.monitor_.log.add_text("Info",
-                                f"{sum(model._get_n_fit_scalars_per_param()[p] for p in model.params)} "
-                                f"free scalar parameters")
     model.monitor_.log.add_text("Info", f"nLinesY {len(len_Y)}")
     model.monitor_.log.add_text("Info", f"nY {len(Y)}")
 
