@@ -9,6 +9,7 @@ import tensorboardX
 
 assert (hmmlearn.__version__ >= "0.2.3")
 
+
 class TbXMonitor(base.ConvergenceMonitor):
     def __init__(self, tol, n_iter, name, model: base._BaseHMM):
         super(TbXMonitor, self).__init__(tol, n_iter, False)
@@ -40,6 +41,7 @@ class TbXMonitor(base.ConvergenceMonitor):
         self.iter += 1
 
 
+num_workers = 16
 dataset_path = "output/europarl-v7.de-en.de.clean"
 train_step_size = 2000  # 10
 threshold = 4  # 5
@@ -90,26 +92,33 @@ if __name__ == '__main__':
     del testLines  # free space
 
     # setup model
-    model = MultiThreadFit(n_components=n_states, n_iter=10)
+    model = MultiThreadFit(n_components=n_states, n_iter=10, num_workers=num_workers)  # save & score every 10 iters
     model.n_features = len(trainAlphabet)
     model.transmat_ = np.random.random([model.n_components, model.n_components])
     model.startprob_ = np.asarray([1 / n_states for _ in range(n_states)])
     model.emissionprob_ = np.random.random([model.n_components, model.n_features])
     model.monitor_ = TbXMonitor(model.tol, model.n_iter, name, model)
-
+    model.monitor_.log.add_text("Info",
+                                f"{sum(model._get_n_fit_scalars_per_param()[p] for p in model.params)} "
+                                f"free scalar parameters")
     model.monitor_.log.add_text("Info", f"nLinesX {len(len_X)}")
     model.monitor_.log.add_text("Info", f"nX {len(X)}")
     model.monitor_.log.add_text("Info", f"nLinesY {len(len_Y)}")
     model.monitor_.log.add_text("Info", f"nY {len(Y)}")
 
     # train
-    for i in range(n_iter//10):
+    while model.monitor_.iter < n_iter:
+        model.monitor_._reset()
         model.fit(X, len_X)
 
         log, model.monitor_.log = model.monitor_.log, None
-        with open("output/" + name + "__" + str(i*10).zfill(3) + ".pkl", 'wb') as file:
+        with open("output/" + name + "__" + str(model.monitor_.iter).zfill(3) + ".pkl", 'wb') as file:
             pickle.dump(model, file)
         model.monitor_.log = log
+
+        if model.monitor_.converged:
+            print("Model Converged!")
+            break
 
         score = model.score(Y, len_Y)
         model.monitor_.log.add_scalar("score", score, global_step=model.monitor_.iter)
@@ -119,5 +128,6 @@ if __name__ == '__main__':
     print(f"TestScore:   {test_prob}")
 
     # save model
+    model.monitor_.log.close()
     with open("output/" + name + ".pkl", 'wb') as file:
         pickle.dump(model, file)
