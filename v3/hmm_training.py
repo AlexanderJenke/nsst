@@ -41,21 +41,22 @@ class TbXMonitor(base.ConvergenceMonitor):
         self.iter += 1
 
 
-num_workers = 16
-dataset_path = "output/europarl-v7.de-en.de.clean"
-train_step_size = 20  # 10
-threshold = 4  # 5
-n_states = 100
-n_iter = 101
-name = f"tss{train_step_size}_th{threshold}_nSt{n_states}_nIt{n_iter}"
+NUM_WORKERS = 16
+DATASET_PATH = "output/europarl-v7.de-en.de.clean"
+TRAIN_STEP_SIZE = 20  # 10
+THRESHOLD = 4  # 5
+N_STATES = 100
+N_ITER = 101
+N_ITER_PER_SCORE = 10
+name = f"tss{TRAIN_STEP_SIZE}_th{THRESHOLD}_nSt{N_STATES}_nIt{N_ITER}"
 
 if __name__ == '__main__':
     # load data
-    lines = e_dl.load_clean_dataset(dataset_path)
+    lines = e_dl.load_clean_dataset(DATASET_PATH)
 
     # select data (train, test)
     testLines = lines[:4096]
-    trainLines = lines[4096::train_step_size]
+    trainLines = lines[4096::TRAIN_STEP_SIZE]
     del lines  # free space
 
     # create alphabet (reduce -> threshold)
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     # '''
 
     # create alphabets
-    trainAlphabet = e_dl.create_alphabet(trainWordcount, threshold=threshold)
+    trainAlphabet = e_dl.create_alphabet(trainWordcount, threshold=THRESHOLD)
     testAlphabet = e_dl.create_test_alphabet(trainAlphabet, testWordcount)
 
     # prepare tokens
@@ -92,12 +93,12 @@ if __name__ == '__main__':
     del testLines  # free space
 
     # setup model
-    model = MultiThreadFit(n_components=n_states, n_iter=10, num_workers=num_workers)  # save & score every 10 iters
+    model = MultiThreadFit(n_components=N_STATES, n_iter=N_ITER_PER_SCORE, num_workers=NUM_WORKERS)  # save & score every N_IER_PER_SCORE iters
     model.n_features = len(trainAlphabet)
     model.transmat_ = np.random.random([model.n_components, model.n_components])
-    model.startprob_ = np.asarray([1 / n_states for _ in range(n_states)])
+    model.startprob_ = np.asarray([1 / N_STATES for _ in range(N_STATES)])
     model.emissionprob_ = np.random.random([model.n_components, model.n_features])
-    model.monitor_ = TbXMonitor(model.tol, model.n_iter, name, model)
+    model.monitor_ = TbXMonitor(model.tol, N_ITER, name, model)
     model.monitor_.log.add_text("Info",
                                 f"{sum(model._get_n_fit_scalars_per_param()[p] for p in model.params)} "
                                 f"free scalar parameters")
@@ -107,8 +108,8 @@ if __name__ == '__main__':
     model.monitor_.log.add_text("Info", f"nY {len(Y)}")
 
     # train
-    while model.monitor_.iter < n_iter:
-        model.monitor_._reset()
+    model.monitor_._reset()
+    while model.monitor_.iter < N_ITER:
         model.fit(X, len_X)
 
         log, model.monitor_.log = model.monitor_.log, None
@@ -116,16 +117,12 @@ if __name__ == '__main__':
             pickle.dump(model, file)
         model.monitor_.log = log
 
-        if model.monitor_.converged:
-            print("Model Converged!")
-            break
-
         score = model.score(Y, len_Y)
         model.monitor_.log.add_scalar("score", score, global_step=model.monitor_.iter)
 
-    # eval
-    test_prob = model.score(Y, len_Y)
-    print(f"TestScore:   {test_prob}")
+        if model.monitor_.converged:
+            print("Model Converged!")
+            break
 
     # save model
     model.monitor_.log.close()
