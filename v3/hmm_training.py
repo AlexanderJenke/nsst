@@ -43,7 +43,7 @@ class TbXMonitor(base.ConvergenceMonitor):
 
 num_workers = 16
 dataset_path = "output/europarl-v7.de-en.de.clean"
-train_step_size = 2000  # 10
+train_step_size = 20  # 10
 threshold = 4  # 5
 n_states = 100
 n_iter = 101
