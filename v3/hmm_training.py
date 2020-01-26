@@ -47,7 +47,7 @@ TRAIN_STEP_SIZE = 20  # 10
 THRESHOLD = 4  # 5
 N_STATES = 100
 N_ITER = 101
-N_ITER_PER_SCORE = 10
+N_ITER_PER_SCORE = 3
 name = f"tss{TRAIN_STEP_SIZE}_th{THRESHOLD}_nSt{N_STATES}_nIt{N_ITER}"
 
 if __name__ == '__main__':

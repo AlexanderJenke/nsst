@@ -128,8 +128,10 @@ class MultiThreadFit(hmm.MultinomialHMM):
             Returns self.
         """
         X = check_array(X)
-        self._init(X, lengths=lengths)
-        self._check()
+
+        if not self.monitor_.iter:
+            self._init(X, lengths=lengths)
+            self._check()
 
         for iter in range(self.n_iter):
             stats = self._initialize_sufficient_statistics()
