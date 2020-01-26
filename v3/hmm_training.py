@@ -45,10 +45,13 @@ NUM_WORKERS = 16
 DATASET_PATH = "output/europarl-v7.de-en.de.clean"
 TRAIN_STEP_SIZE = 20  # 10
 THRESHOLD = 4  # 5
-N_STATES = 100
+N_STATES = 54  # 100
 N_ITER = 101
 N_ITER_PER_SCORE = 3
 name = f"tss{TRAIN_STEP_SIZE}_th{THRESHOLD}_nSt{N_STATES}_nIt{N_ITER}"
+
+MODEL_PATH = None
+# MODEL_PATH = "/Users/alexanderjenke/Documents/Uni/MA/VERT-2/P-PnS/nsst/v3/output/tss200_th4_nSt10_nIt101.pkl"
 
 if __name__ == '__main__':
     # load data
@@ -99,6 +102,16 @@ if __name__ == '__main__':
     model.startprob_ = np.asarray([1 / N_STATES for _ in range(N_STATES)])
     model.emissionprob_ = np.random.random([model.n_components, model.n_features])
     model.monitor_ = TbXMonitor(model.tol, N_ITER, name, model)
+
+    if MODEL_PATH is not None:
+        log = model.monitor_.log
+        with open(MODEL_PATH, 'rb') as file:
+            model = pickle.load(file)
+        model.monitor_.log = log
+    else:
+        model.monitor_._reset()
+
+
     model.monitor_.log.add_text("Info",
                                 f"{sum(model._get_n_fit_scalars_per_param()[p] for p in model.params)} "
                                 f"free scalar parameters")
@@ -108,7 +121,6 @@ if __name__ == '__main__':
     model.monitor_.log.add_text("Info", f"nY {len(Y)}")
 
     # train
-    model.monitor_._reset()
     while model.monitor_.iter < N_ITER:
         model.fit(X, len_X)
 
