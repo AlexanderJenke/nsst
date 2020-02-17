@@ -6,13 +6,14 @@ import numpy as np
 from tqdm import tqdm
 import europarl_dataloader as e_dl
 from hmm_training import TbXMonitor
+import sys
 
 DATASET_PATH = "output/europarl-v7.de-en.de.clean"
 TRAIN_STEP_SIZE = 20
 THRESHOLD = 4
-MODEL_PATH = "output/tss20_th4_nSt200_nIt101.pkl"
+# MODEL_PATH = "output/tss20_th4_nSt200_nIt101.pkl"
 
-if __name__ == '__main__':
+def main(MODEL_PATH):
     print(MODEL_PATH)
     lines = e_dl.load_clean_dataset(DATASET_PATH)
     testLines = lines[:4096]
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 
     del testLines  # free space
     # '''
-
+       
     with open(MODEL_PATH, 'rb') as file:
         model = pickle.load(file)
     """ :type model: MultiThreadFit"""
@@ -51,6 +52,7 @@ if __name__ == '__main__':
 
     states = {}
 
+    print("Unique vocab per state")
     # words per state unique words
     for i in range(model.emissionprob_.shape[1]):
         s = model.emissionprob_[:, i].argmax()
@@ -61,8 +63,8 @@ if __name__ == '__main__':
     for i in sorted(states):
         print(i, states[i])
 
-    input("WAITING...\n\n")
-
+    print("\n\n")
+    print("Vocab per state")
     # words per state
     for i, prob in enumerate(model.emissionprob_[:]):
         print(f"{i}: ", end="")
@@ -75,7 +77,8 @@ if __name__ == '__main__':
 
         print("")
 
-    input("WAITING...\n\n")
+    print("\n\n")
+    print("Sentence per start state")
     sp = {k: model.startprob_[k] for k in range(len(model.startprob_))}
     print({k: sp[k] for k in sorted(sp, key=lambda x: sp[x], reverse=True)})
 
@@ -107,3 +110,6 @@ if __name__ == '__main__':
             print(f"{k} not in sentences!")
 
         print("\n\n")
+        
+if __name__ == "__main__":
+    main("output/tss20_th4_nSt200_nIt101.pkl")
