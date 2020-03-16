@@ -2,14 +2,47 @@ import logging
 from _thread import allocate_lock, start_new_thread
 from time import sleep
 
+import tensorboardX
 from hmmlearn import _hmmc as hmmlearn_hmmc
 from hmmlearn import _utils as hmmlearn_utils
-from hmmlearn import hmm
+from hmmlearn import hmm, base
 from hmmlearn.utils import *
 from sklearn.utils import check_array
 from tqdm import tqdm
 
 _log = logging.getLogger(__name__)
+
+
+class TbXMonitor(base.ConvergenceMonitor):
+    def __init__(self, tol, n_iter, name, model: base._BaseHMM):
+        super(TbXMonitor, self).__init__(tol, n_iter, False)
+        self.model = model
+        self.log = tensorboardX.SummaryWriter("runs/" + name)
+        self.iter = 0
+
+    def report(self, logprob):
+        """Reports to Tesorboard.
+
+        Parameters
+        ----------
+        logprob : float
+            The log probability of the data as computed by EM algorithm
+            in the current iteration.
+        """
+        if self.history:
+            delta = logprob - self.history[-1]
+            self.log.add_scalar("delta", delta, global_step=self.iter)
+        self.log.add_scalar("logprob", logprob, global_step=self.iter)
+        self.history.append(logprob)
+
+        self.log.add_image("transmat_", (self.model.transmat_ / self.model.transmat_.max())[None, :, :],
+                           global_step=self.iter)
+        self.log.add_image("startprob_", (self.model.startprob_ / self.model.startprob_.max())[None, None, :],
+                           global_step=self.iter)
+        self.log.add_image("emissionprob_",
+                           (self.model.emissionprob_ / self.model.emissionprob_.max())[None, :, :],
+                           global_step=self.iter)
+        self.iter += 1
 
 
 def iter_from_X_lengths(X, lengths, desc=None):

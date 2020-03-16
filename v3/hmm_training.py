@@ -2,46 +2,12 @@ import pickle
 
 import hmmlearn
 import numpy as np
-import tensorboardX
-from hmmlearn import base
 from tqdm import tqdm
 
 import europarl_dataloader as e_dl
-from HMM import MultiThreadFit
+from HMM import MultiThreadFit, TbXMonitor
 
 assert (hmmlearn.__version__ >= "0.2.3")
-
-
-class TbXMonitor(base.ConvergenceMonitor):
-    def __init__(self, tol, n_iter, name, model: base._BaseHMM):
-        super(TbXMonitor, self).__init__(tol, n_iter, False)
-        self.model = model
-        self.log = tensorboardX.SummaryWriter("runs/" + name)
-        self.iter = 0
-
-    def report(self, logprob):
-        """Reports to Tesorboard.
-
-        Parameters
-        ----------
-        logprob : float
-            The log probability of the data as computed by EM algorithm
-            in the current iteration.
-        """
-        if self.history:
-            delta = logprob - self.history[-1]
-            self.log.add_scalar("delta", delta, global_step=self.iter)
-        self.log.add_scalar("logprob", logprob, global_step=self.iter)
-        self.history.append(logprob)
-
-        self.log.add_image("transmat_", (model.transmat_ / model.transmat_.max())[None, :, :], global_step=self.iter)
-        self.log.add_image("startprob_", (model.startprob_ / model.startprob_.max())[None, None, :],
-                           global_step=self.iter)
-        self.log.add_image("emissionprob_",
-                           (model.emissionprob_ / model.emissionprob_.max())[None, :, :],
-                           global_step=self.iter)
-        self.iter += 1
-
 
 NUM_WORKERS = 16
 DATASET_PATH = "output/europarl-v7.de-en.de.clean"
@@ -79,6 +45,8 @@ if __name__ == '__main__':
     # create alphabets
     trainAlphabet = e_dl.create_alphabet(trainWordcount, threshold=THRESHOLD)
     testAlphabet = e_dl.create_test_alphabet(trainAlphabet, testWordcount)
+    with open(f"output/alphabet_tss{TRAIN_STEP_SIZE}_th{THRESHOLD}.pkl", 'wb') as file:
+        pickle.dump(testAlphabet, file)
 
     # prepare tokens
     lines_X = [[[trainAlphabet[word]] for word in line if len(word)]
@@ -98,7 +66,8 @@ if __name__ == '__main__':
     del testLines  # free space
 
     # setup model
-    model = MultiThreadFit(n_components=N_STATES, n_iter=N_ITER_PER_SCORE, num_workers=NUM_WORKERS)  # save & score every N_IER_PER_SCORE iters
+    model = MultiThreadFit(n_components=N_STATES, n_iter=N_ITER_PER_SCORE,
+                           num_workers=NUM_WORKERS)  # save & score every N_IER_PER_SCORE iters
     model.n_features = len(trainAlphabet)
     model.transmat_ = np.random.random([model.n_components, model.n_components])
     model.startprob_ = np.asarray([1 / N_STATES for _ in range(N_STATES)])
@@ -112,7 +81,6 @@ if __name__ == '__main__':
         model.monitor_.log = log
     else:
         model.monitor_._reset()
-
 
     model.monitor_.log.add_text("Info",
                                 f"{sum(model._get_n_fit_scalars_per_param()[p] for p in model.params)} "
