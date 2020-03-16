@@ -1,11 +1,13 @@
-import hmmlearn
-from hmmlearn import base
-from HMM import MultiThreadFit
 import pickle
+
+import hmmlearn
 import numpy as np
-from tqdm import tqdm
-import europarl_dataloader as e_dl
 import tensorboardX
+from hmmlearn import base
+from tqdm import tqdm
+
+import europarl_dataloader as e_dl
+from HMM import MultiThreadFit
 
 assert (hmmlearn.__version__ >= "0.2.3")
 

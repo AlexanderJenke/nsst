@@ -1,11 +1,4 @@
-import hmmlearn
-from hmmlearn import base
-from HMM import MultiThreadFit
-import pickle
-import numpy as np
-from tqdm import tqdm
 import europarl_dataloader as e_dl
-from hmm_training import TbXMonitor
 
 DATASET_PATH = "output/europarl-v7.de-en.de.clean"
 TRAIN_STEP_SIZE = 20

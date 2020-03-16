@@ -1,16 +1,14 @@
-import hmmlearn
-from hmmlearn import base
-from HMM import MultiThreadFit
 import pickle
+
 import numpy as np
-from tqdm import tqdm
+
 import europarl_dataloader as e_dl
-from hmm_training import TbXMonitor
-import sys
 
 DATASET_PATH = "output/europarl-v7.de-en.de.clean"
 TRAIN_STEP_SIZE = 20
 THRESHOLD = 4
+
+
 # MODEL_PATH = "output/tss20_th4_nSt200_nIt101.pkl"
 
 def main(MODEL_PATH):
@@ -42,7 +40,7 @@ def main(MODEL_PATH):
 
     del testLines  # free space
     # '''
-       
+
     with open(MODEL_PATH, 'rb') as file:
         model = pickle.load(file)
     """ :type model: MultiThreadFit"""
@@ -110,6 +108,7 @@ def main(MODEL_PATH):
             print(f"{k} not in sentences!")
 
         print("\n\n")
-        
+
+
 if __name__ == "__main__":
     main("output/tss20_th4_nSt200_nIt101.pkl")

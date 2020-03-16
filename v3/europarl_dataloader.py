@@ -1,7 +1,8 @@
-import re
-from tqdm import tqdm
-from sys import stdout, argv
 import os
+import re
+from sys import stdout, argv
+
+from tqdm import tqdm
 
 TOKEN_SPLIT_CHAR = ' '
 

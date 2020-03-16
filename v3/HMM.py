@@ -1,14 +1,13 @@
-from hmmlearn import hmm, _hmmc
-from hmmlearn.utils import *
 import logging
-from sklearn.utils import check_array
-
-from hmmlearn import _utils
-from tqdm import tqdm
-import numpy as np
-
 from _thread import allocate_lock, start_new_thread
 from time import sleep
+
+from hmmlearn import _hmmc as hmmlearn_hmmc
+from hmmlearn import _utils as hmmlearn_utils
+from hmmlearn import hmm
+from hmmlearn.utils import *
+from sklearn.utils import check_array
+from tqdm import tqdm
 
 _log = logging.getLogger(__name__)
 
@@ -89,10 +88,10 @@ class MultiThreadFit(hmm.MultinomialHMM):
                 return
 
             log_xi_sum = np.full((n_components, n_components), -np.inf)
-            _hmmc._compute_log_xi_sum(n_samples, n_components, fwdlattice,
-                                      log_mask_zero(self.transmat_),
-                                      bwdlattice, framelogprob,
-                                      log_xi_sum)
+            hmmlearn_hmmc._compute_log_xi_sum(n_samples, n_components, fwdlattice,
+                                              log_mask_zero(self.transmat_),
+                                              bwdlattice, framelogprob,
+                                              log_xi_sum)
 
         with self.stats_lock:
             stats['nobs'] += 1
@@ -212,7 +211,7 @@ class MultiThreadFit(hmm.MultinomialHMM):
             posteriors.
         decode : Find most likely state sequence corresponding to ``X``.
         """
-        _utils.check_is_fitted(self, "startprob_")
+        hmmlearn_utils.check_is_fitted(self, "startprob_")
         self._check()
 
         X = check_array(X)
