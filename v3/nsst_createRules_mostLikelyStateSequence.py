@@ -17,6 +17,7 @@ alignment_file = "output/forward.N.tss20.align"
 paired_language_file = "output/europarl-v7.de-en.tss20.paired"
 model_file = "output/tss20_th4_nSt200_nIt101.pkl"
 alphabet_file = "output/alphabet_tss20_th4.pkl"
+rules_output_file = "output/rules_tss20"
 
 create_rule_lock = Lock()
 
@@ -102,4 +103,4 @@ if __name__ == '__main__':
                                                               desc="process sentence pairs"):
                         create_rules_for_pair(sentence_pair, alignment_line, nsst)
 
-nsst.save_rules("output/test")
+    nsst.save_rules(rules_output_file)
