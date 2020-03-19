@@ -43,10 +43,11 @@ class Rule:
             register = ""
             for op in reg.split(' '):
                 if op.startswith("x"):
-                    if len(args) < int(op[1:]) - 1:
+                    if len(args) > int(op[1:]) - 1:
                         register += f"{args[int(op[1:]) - 1]}"
                     else:
-                        register += f"REG OVERFLOW"
+                        raise ReferenceError(
+                            f"Tried to access register {int(op[1:]) - 1} but only registers 0-{len(args)-1} exist!")
                 else:
                     register += f"{op} "
             registers += (register,)
@@ -58,6 +59,9 @@ class Rule:
 
 
 class NSST:
+    """This NSST stores a set of rules in a list.
+
+    """
     rules = []
 
     def load_rules(self, file):
@@ -91,6 +95,9 @@ class NSST:
 
 
 class NSST_dict:
+    """ This NSST only stores the rule descriptions in a dict to save memory.
+    Rules are generated on request by the 'get_rules' function.
+    """
     rules_d = {}
 
     def load_rules(self, file):

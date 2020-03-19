@@ -49,44 +49,36 @@ with open(paired_language_file, 'r') as sentence_pairs:
             # get most likely state sequence of the source sentence & append a final state (-1)
             states_src = model.decode(tokens_src)[1]
             states_src = np.concatenate([states_src, [-1]])
-            register_spans = ()
+            current_spans = ()
 
             for i in range(len(states_src) - 1):
                 q = states_src[i]
                 qn = states_src[i + 1]
                 token = tokens_src[i][0]
-                spans = NSST.span(alignment, i)
+                target_spans = NSST.span(alignment, i)
 
                 register_operations = ""
                 # no changes add identity rule
-                if register_spans == spans:
-                    for xi in range(len(spans)):
-                        register_operations += f"x{xi}, "
 
-                else:
-                    reg_op = ""
-                    for span in spans:
-                        if sum([span == s for s in register_spans]) > 0:
-                            register_operations += f"x{np.argmax([span == s for s in register_spans])}, "
-                        else:
-                            j = span[0]
-                            while j <= span[1]:
-                                j_is_start_of_span = [j == s[0] for s in register_spans]
-                                if sum(j_is_start_of_span) > 0:
-                                    cor_span = np.argmax(j_is_start_of_span)
-                                    register_operations += f"x{cor_span} "
-                                    j = register_spans[cor_span][1] + 1
+                for span in target_spans:  # create target spans out of existing spans and target sentence tokens
+                    j = span[0]
+                    while j <= span[1]:
+                        j_is_start_of_span = [j == s[0] for s in current_spans]
+                        if sum(j_is_start_of_span) > 0:  # j matches existing span
+                            span_id = np.argmax(j_is_start_of_span)
+                            register_operations += f"x{span_id} "  # use this span
+                            j = current_spans[span_id][1] + 1  # continue with next index after span
+                        else:  # j not in existing spans
+                            register_operations += f"{tokens_tgt[j][0]} "  # rule generates according token
+                            j += 1
+                    register_operations = register_operations[:-1] + ", "  # finish register operation
 
-                                else:
-                                    register_operations += f"{tokens_tgt[j][0]} "
-                                    j += 1
-                            register_operations = register_operations[:-1] + ", "
                 # print(register_operations)
                 nsst.add_rule(current_state=q,
                               next_state=qn,
                               token=token,
                               register_operations=register_operations[:-2])
 
-                register_spans = spans  # update current register_spans
+                current_spans = target_spans  # update current register_spans
 
 nsst.save_rules("output/test")
