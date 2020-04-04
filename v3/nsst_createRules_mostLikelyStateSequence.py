@@ -12,12 +12,13 @@ from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 doMultiThreading = True
+doAppendQf = False  # append final state? else append start state
 
 alignment_file = "output/forward.N.tss20.align"
 paired_language_file = "output/europarl-v7.de-en.tss20.paired"
 model_file = "output/tss20_th4_nSt200_nIt101.pkl"
 alphabet_file = "output/alphabet_tss20_th4.pkl"
-rules_output_file = "output/rules_tss20"
+nsst_output_file = "output/nsst_tss20_th4_nSt200_Q0.pkl"
 
 create_rule_lock = Lock()
 
@@ -28,9 +29,12 @@ def create_rules_for_pair(sentence_pair, alignment_line, nsst):
     tokens_src = [[alphabet_extended_src[word]] for word in sentence_src.split(" ") if len(word)]
     tokens_tgt = [[alphabet_tgt[word]] for word in sentence_tgt.split(" ") if len(word)]
 
-    # get most likely state sequence of the source sentence & append a final state (-1)
+    # get most likely state sequence of the source sentence
     states_src = model.decode(tokens_src)[1]
-    states_src = np.concatenate([states_src, [-1]])
+    if doAppendQf:
+        states_src = np.concatenate([states_src, [-1]])  # append a final state (-1) -> q-q-q-qf
+    else:
+        states_src = np.concatenate([[-1], states_src])  # append start state q0(-1) -> q0-q-q-q
     current_spans = ()
 
     for i in range(len(states_src) - 1):
@@ -84,23 +88,21 @@ if __name__ == '__main__':
         alphabet_tgt = e_dl.create_alphabet(wordcount_tgt)
         alphabet_extended_src = e_dl.create_test_alphabet(alphabet_src, wordcount_src)
 
-    # alphabet_src_lut = {alphabet_src[key]: key for key in alphabet_src}
-    # alphabet_tgt_lut = {alphabet_tgt[key]: key for key in alphabet_tgt}
+    nsst = NSST.MinimalNSST(alphabet_src, alphabet_tgt)
 
-    nsst = NSST.NSST_dict()
     # iterate over pairs of sentences and alignment
     with open(paired_language_file, 'r') as sentence_pairs:
         with open(alignment_file, 'r') as alignments:
-            with ThreadPoolExecutor() as executor:
-                if doMultiThreading:
+            if doMultiThreading:
+                with ThreadPoolExecutor() as executor:
                     jobs = [executor.submit(create_rules_for_pair, sentence_pair, alignment_line, nsst)
                             for sentence_pair, alignment_line in tqdm(zip(sentence_pairs, alignments),
                                                                       desc="create job per sentence pair")]
                     for _ in tqdm(as_completed(jobs), total=len(jobs), desc="process jobs"):
                         pass
-                else:
-                    for sentence_pair, alignment_line in tqdm(zip(sentence_pairs, alignments),
-                                                              desc="process sentence pairs"):
-                        create_rules_for_pair(sentence_pair, alignment_line, nsst)
+            else:
+                for sentence_pair, alignment_line in tqdm(zip(sentence_pairs, alignments),
+                                                          desc="process sentence pairs"):
+                    create_rules_for_pair(sentence_pair, alignment_line, nsst)
 
-    nsst.save_rules(rules_output_file)
+    nsst.save(nsst_output_file)
