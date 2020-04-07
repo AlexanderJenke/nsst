@@ -78,7 +78,7 @@ class Rule:
 
 
 class NSST:
-    """This NSST stores a set of rules accessible over the tuple (q,qn,t,num_reg)
+    """This NSST stores a set of rules accessible over the tuple (current_state, token, num_reg)
     """
 
     def __init__(self, alphabet_src=[], alphabet_tgt=[]):
