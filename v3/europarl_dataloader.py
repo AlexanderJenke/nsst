@@ -169,7 +169,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
 
     parser = ArgumentParser(prog='python3 europarl_dataloader.py')
-    parser.add_argument("-i", "--input", help="europarl data set to be preprocessed")
+    parser.add_argument("-i", "--input", help="europarl data set to be preprocessed", required=True)
     parser.add_argument("-o", "--output", help="directory the proccessed data shuold be stored to, default: output",
                         default="output")
     parser.add_argument("--lower", help="make data lowercase, default: False", default=False, type=bool)
@@ -179,21 +179,17 @@ if __name__ == '__main__':
                         help="Character used to separate words in the preprocessed data, default: ' ' (Space)", )
 
     args = parser.parse_args()
-    if args.input is None:
-        parser.print_help()
-        exit()
 
-    input_file = args.input
     output_path = args.output
 
     if args.split_char is not None:
         TOKEN_SPLIT_CHAR = args.split_char
 
     # preprocess the europarl data
-    data = load_dataset(input_file, lower=args.lower, remove=args.remove)
+    data = load_dataset(args.input, lower=args.lower, remove=args.remove)
 
     # store the data in a file named after the input extended by the '.clean' extension in the defined output directory
-    with open(os.path.join(output_path, os.path.basename(input_file) + ".clean"), 'w') as f:
+    with open(os.path.join(output_path, os.path.basename(args.input) + ".clean"), 'w') as f:
         for line in tqdm(data, desc=f"writing clean lines to {f.name}", file=stdout):
             sentence = ""
             for word in line:
