@@ -14,7 +14,16 @@ _log = logging.getLogger(__name__)
 
 
 class TbXMonitor(base.ConvergenceMonitor):
+    """HMM Monitor writing logs to tensorboard """
+
     def __init__(self, tol, n_iter, name, model: base._BaseHMM):
+        """ Setup moitor
+        :param tol: Convergence threshold. Converged if the log probability improvement
+                    between two consecutive iterations is less than threshold.
+        :param n_iter: maximum number of iterations to be performed
+        :param name: trial name to be used in tensorboard
+        :param model: model to be monitored
+        """
         super(TbXMonitor, self).__init__(tol, n_iter, False)
         self.model = model
         self.log = tensorboardX.SummaryWriter("runs/" + name)
@@ -29,12 +38,14 @@ class TbXMonitor(base.ConvergenceMonitor):
             The log probability of the data as computed by EM algorithm
             in the current iteration.
         """
+        # add logprob delta to log
         if self.history:
             delta = logprob - self.history[-1]
             self.log.add_scalar("delta", delta, global_step=self.iter)
         self.log.add_scalar("logprob", logprob, global_step=self.iter)
-        self.history.append(logprob)
+        self.history.append(logprob)  # keep track of the last two iterations
 
+        # add matrix images to log
         self.log.add_image("transmat_", (self.model.transmat_ / self.model.transmat_.max())[None, :, :],
                            global_step=self.iter)
         self.log.add_image("startprob_", (self.model.startprob_ / self.model.startprob_.max())[None, None, :],
@@ -42,11 +53,19 @@ class TbXMonitor(base.ConvergenceMonitor):
         self.log.add_image("emissionprob_",
                            (self.model.emissionprob_ / self.model.emissionprob_.max())[None, :, :],
                            global_step=self.iter)
+
+        # increase iteration count
         self.iter += 1
 
 
 def iter_from_X_lengths(X, lengths, desc=None):
-    if lengths is None:
+    """ generator returning the sentences of the dataset
+    :param X: Dataset containing concatenated sentences
+    :param lengths: List of sentence lengths
+    :param desc: Description shown in progressbar
+    :return: generator
+    """
+    if lengths is None:  # if the length is not given only one sentence is given
         yield 0, len(X)
     else:
         n_samples = X.shape[0]
@@ -57,10 +76,12 @@ def iter_from_X_lengths(X, lengths, desc=None):
                              .format(n_samples, lengths))
 
         for i in tqdm(range(len(lengths)), desc=desc):
-            yield start[i], end[i]
+            yield start[i], end[i]  # return start and end position of sentence
 
 
 class MultiThreadFit(hmm.MultinomialHMM):
+    """ Multi threaded version of the MultinomialHMM"""
+
     def __init__(self, n_components=1,
                  startprob_prior=1.0, transmat_prior=1.0,
                  algorithm="viterbi", random_state=None,
@@ -91,6 +112,7 @@ class MultiThreadFit(hmm.MultinomialHMM):
 
     def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
                                           posteriors, fwdlattice, bwdlattice):
+        # Code from hmmlearn modified to be thread save
         """Updates sufficient statistics from a given sample.
 
         Parameters
@@ -126,7 +148,7 @@ class MultiThreadFit(hmm.MultinomialHMM):
                                               bwdlattice, framelogprob,
                                               log_xi_sum)
 
-        with self.stats_lock:
+        with self.stats_lock:  # ensure only one thread at a time changes the stats -> prevent race conditions
             stats['nobs'] += 1
             if 's' in self.params:
                 stats['start'] += posteriors[0]
@@ -138,6 +160,7 @@ class MultiThreadFit(hmm.MultinomialHMM):
                     stats['obs'][:, symbol] += posteriors[t]
 
     def fit(self, X, lengths=None):
+        # Code from hmmlearn modified to be multi threaded
         """Estimate model parameters.
 
         An initialization step is performed before entering the
@@ -161,11 +184,11 @@ class MultiThreadFit(hmm.MultinomialHMM):
         """
         X = check_array(X)
 
-        if not self.monitor_.iter:
+        if not self.monitor_.iter:  # initial checks and setup if it is the first iteration
             self._init(X, lengths=lengths)
             self._check()
 
-        for iter in range(self.n_iter):
+        for iter in range(self.n_iter):  # fit model for given number of iterations
             stats = self._initialize_sufficient_statistics()
             self.curr_logprob = 0
 
@@ -174,7 +197,7 @@ class MultiThreadFit(hmm.MultinomialHMM):
             self.stats_lock = allocate_lock()
             logprob_lock = allocate_lock()
 
-            for i in range(self.num_workers):
+            for i in range(self.num_workers):  # generate workers to process the sentences
                 thread_exit_locks.append(allocate_lock())
                 start_new_thread(self.fit_thread, (), {"model": self,
                                                        "iterator": iterator,
@@ -183,17 +206,13 @@ class MultiThreadFit(hmm.MultinomialHMM):
                                                        "X": X,
                                                        "exit_lock": thread_exit_locks[-1]})
 
-            sleep(1)
-            # wait for the threads to finish
-            for i, t in enumerate(thread_exit_locks):
-                with t:
+            sleep(1)  # wait for all threads to start
+            for i, t in enumerate(thread_exit_locks):  # wait for the threads to finish
+                with t:  # try to acquire lock held by thread -> if acquired, thread is signaling end of work
                     pass
 
-            # keep model dumpable with pickle
-            self.stats_lock = None
+            self.stats_lock = None  # keep model dumpable with pickle
 
-            # XXX must be before convergence check, because otherwise
-            #     there won't be any updates for the case ``n_iter=1``.
             self._do_mstep(stats)
             self.monitor_.report(self.curr_logprob)
             del self.curr_logprob
@@ -207,21 +226,33 @@ class MultiThreadFit(hmm.MultinomialHMM):
         return self
 
     def fit_thread(self, model, stats, iterator, logprob_lock, X, exit_lock):
-        with exit_lock:
-            while True:
+        # Code from hmmlearn modified to be multi threaded
+        """ Code executed by a thread fitting the model to the data
+        :param model: model to be fitted
+        :param stats: stats to be accumulated
+        :param iterator: thread save generator providing the sentences to be fitted to
+        :param logprob_lock: lock preventing race conditions on accumulated logprob
+        :param X: train data
+        :param exit_lock: lock used to signal finished working
+        """
+        with exit_lock:  # hold lock acquired to signal work in progress
+            while True:  # run until all sentences are processed
                 try:
-                    i, j = iterator.next()
-                except StopIteration:
-                    break
+                    i, j = iterator.next()  # get next sentence
+                except StopIteration:  # generator signals end of sentences
+                    break  # finish
+
+                # fix model to sentence
                 framelogprob = model._compute_log_likelihood(X[i:j])
                 logprob, fwdlattice = model._do_forward_pass(framelogprob)
-                with logprob_lock:
+                with logprob_lock:  # accumulate with one threat at a time
                     model.curr_logprob += logprob
                 bwdlattice = model._do_backward_pass(framelogprob)
                 posteriors = model._compute_posteriors(fwdlattice, bwdlattice)
                 model._accumulate_sufficient_statistics(stats, X[i:j], framelogprob, posteriors, fwdlattice, bwdlattice)
 
     def score(self, X, lengths=None):
+        # Code from hmmlearn modified to be multi threaded
         """Compute the log probability under the model.
 
         Parameters
@@ -248,14 +279,13 @@ class MultiThreadFit(hmm.MultinomialHMM):
         self._check()
 
         X = check_array(X)
-        # XXX we can unroll forward pass for speed and memory efficiency.
         self.logprob = 0
 
         iterator = self.ThreadsafeIter(iter_from_X_lengths(X, lengths, desc="Score"))
         thread_exit_locks = []
         logprob_lock = allocate_lock()
 
-        for i in range(self.num_workers):
+        for i in range(self.num_workers):  # generate workers to process the sentences
             thread_exit_locks.append(allocate_lock())
             start_new_thread(self.score_thread, (), {"model": self,
                                                      "iterator": iterator,
@@ -263,24 +293,31 @@ class MultiThreadFit(hmm.MultinomialHMM):
                                                      "X": X,
                                                      "exit_lock": thread_exit_locks[-1]})
 
-        sleep(1)
-        # wait for the threads to finish
-        for i, t in enumerate(thread_exit_locks):
-            with t:
+        sleep(1)  # wait for all threads to start
+        for i, t in enumerate(thread_exit_locks):  # wait for the threads to finish
+            with t:  # try to acquire lock held by thread -> if acquired, thread is signaling end of work
                 pass
-
-        # keep model dumpable with pickle
 
         return self.logprob
 
     def score_thread(self, model, iterator, X, logprob_lock, exit_lock):
-        with exit_lock:
-            while True:
+        # Code from hmmlearn modified to be multi threaded
+        """ Code executed by a thread scoring the model
+        :param model: model to be scored
+        :param iterator: thread save generator providing the sentences to be fitted to
+        :param logprob_lock: lock preventing race conditions on accumulated logprob
+        :param X: train data
+        :param exit_lock: lock used to signal finished working
+        """
+        with exit_lock:  # hold lock acquired to signal work in progress
+            while True:  # run until all sentences are processed
                 try:
-                    i, j = iterator.next()
-                except StopIteration:
-                    break
+                    i, j = iterator.next()  # get next sentence
+                except StopIteration:  # generator signals end of sentences
+                    break  # finish
+
+                # score model on sentence
                 framelogprob = model._compute_log_likelihood(X[i:j])
                 logprobij, _fwdlattice = self._do_forward_pass(framelogprob)
-                with logprob_lock:
+                with logprob_lock:  # accumulate logprob with one thread at a time
                     self.logprob += logprobij
