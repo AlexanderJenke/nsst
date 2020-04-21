@@ -1,4 +1,6 @@
 # Nondeterministic Streaming String Transducer
+![Datenfluss durch die einzelnen Verarbeitungsschritte.](Overview.png)
+
 
 ## Dependencies
 - python >= 3.6
@@ -7,3 +9,5 @@
 - numpy
 - tensorboardX
 - tqdm
+
+## Run
