@@ -1,12 +1,33 @@
+import gc
+
 from tqdm import tqdm
 
 import NSST
 
-import gc
-
 if __name__ == '__main__':
     nsst = NSST.NSST()
     nsst.load("output/nsst_tss20_th4_nSt54_Q0.pkl", doCheckRules=False)
+
+    t0 = [r for r in nsst.all_rules if r.token == 0]
+
+    tokens = {}
+    for rule in tqdm(nsst.all_rules):
+        gen = tuple(set(x for x in rule.register_operations.replace(',', '').split(' ')
+                        if len(x) and x[0] != 'x'))
+        if rule.token not in tokens:
+            tokens[rule.token] = set()
+
+        tokens[rule.token].add(gen)
+
+    import numpy as np
+
+    print("#token", len(tokens))
+    print("mean rules per token", np.mean([len(tokens[k]) for k in tokens]))
+    print("#token 0", len(tokens[0]))
+    del tokens[0]
+    print("mean rules per token wo 0", np.mean([len(tokens[k]) for k in tokens]))
+
+    exit()
 
     src = input("Schreibe einen Satz:\n")
     import time
