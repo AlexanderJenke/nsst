@@ -26,8 +26,8 @@ def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, ns
     alignment = [pair.split('-') for pair in alignment_line[:-1].split(" ")]  # split alignment str into pieces
 
     # translate sentences to tokens
-    tokens_src = [[nsst.alphabet_src[word]] for word in sentence_src.split(" ") if len(word)]
-    tokens_tgt = [[nsst.alphabet_tgt[word]] for word in sentence_tgt.split(" ") if len(word)]
+    tokens_src = [[nsst.tokenization_src[word]] for word in sentence_src.split(" ") if len(word)]
+    tokens_tgt = [[nsst.tokenization_tgt[word]] for word in sentence_tgt.split(" ") if len(word)]
 
     # get most likely state sequence of the source sentence
     states_src = model.decode(tokens_src)[1]
@@ -63,7 +63,7 @@ def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, ns
         """
 
         for span in target_spans:  # create target spans out of existing spans and target sentence tokens
-            csi = span[0]  # init current searched index (csi) by the first index in target span
+            csi = span[0]  # init currently searched index (csi) by the first index in target span
             while csi <= span[1]:  # if csi < the last index in target span
                 # check if given span starts with csi
                 csi_is_start_of_span = [csi == s[0] for s in current_spans]
@@ -76,18 +76,17 @@ def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, ns
 
                 # csi not in existing spans -> rule generates corresponding token
                 else:
-                    register_operations += f"{tokens_tgt[j][0]} "  # add corresponding token to rule
+                    register_operations += f"{tokens_tgt[csi][0]} "  # add corresponding token to rule
                     csi += 1  # continue with next index
 
             register_operations = register_operations[:-1] + ", "  # finish register operation
 
         # add the rule 'q -token-> [register_operations](qn)' to the nsst
-        create_rule_lock.acquire()
-        nsst.add_rule(current_state=q,
-                      next_state=qn,
-                      token=token,
-                      register_operations=register_operations[:-2])
-        create_rule_lock.release()
+        with create_rule_lock:
+            nsst.add_rule(current_state=q,
+                          next_state=qn,
+                          token=token,
+                          register_operations=register_operations[:-2])
 
         # update current register_spans
         current_spans = target_spans
@@ -104,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument("-align", "--alignment_file", default="output/forward.N.tss20.align")
     parser.add_argument("-pair", "--paired_language_file", default="output/europarl-v7.de-en.tss20.paired")
     parser.add_argument("-model", "--model_file", default="output/tss20_th4_nSt200_nIt101.pkl")
-    parser.add_argument("-alphabet", "--alphabet_file", default="output/alphabet_tss20_th4.pkl")
+    parser.add_argument("-tokenization", "--tokenization_file", default="output/tokenization_tss20_th4.pkl")
     parser.add_argument("-nsst", "--nsst_output_file", default="output/nsst_tss20_th4_nSt200_Q0.pkl")
     args = parser.parse_args()
 
@@ -115,21 +114,21 @@ if __name__ == '__main__':
         model = pickle.load(file)
     """ :type model: MultiThreadFit"""
 
-    # load alphabet used with HMM
-    with open(args.alphabet_file, 'rb') as file:
-        alphabet_src = pickle.load(file)
+    # load tokenization used with HMM
+    with open(args.tokenization_file, 'rb') as file:
+        tokenization_src = pickle.load(file)
 
-    # create alphabet for target language & extend source alphabet if needed
+    # create tokenization for target language & extend source tokenization if needed
     # (every word in the source language must maps to a token)
     with open(args.paired_language_file, 'r') as sentence_pairs:
         split_sentence_pairs = list(s[1:-2].split(" ||| ") for s in sentence_pairs)
         wordcount_src = e_dl.count_words((w for w in s[0].split(" ")) for s in split_sentence_pairs)
         wordcount_tgt = e_dl.count_words((w for w in s[1].split(" ")) for s in split_sentence_pairs)
-        alphabet_tgt = e_dl.create_alphabet(wordcount_tgt)
-        alphabet_extended_src = e_dl.create_test_alphabet(alphabet_src, wordcount_src)
+        tokenization_tgt = e_dl.create_tokenization(wordcount_tgt)
+        tokenization_extended_src = e_dl.extend_tokenization(tokenization_src, wordcount_src)
 
     # initialize a nsst object to manage the rules
-    nsst = NSST.MinimalNSST(alphabet_extended_src, alphabet_tgt)
+    nsst = NSST.MinimalNSST(tokenization_extended_src, tokenization_tgt)
 
     # iterate over pairs of sentences and alignment
     with open(args.paired_language_file, 'r') as sentence_pairs:

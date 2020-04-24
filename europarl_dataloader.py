@@ -92,57 +92,57 @@ def count_words(lines: tuple):
     return wordcount
 
 
-def create_alphabet(wordcount: dict, threshold=None):
-    """This function creates an alphabet to translate words into tokens
+def create_tokenization(wordcount: dict, threshold=None):
+    """This function creates an tokenization to translate words into tokens
     (numerical representation of word processable by HMM).
 
-    :param wordcount: wordcount of the data the alphabet should be applied to given by the function 'count_words'.
+    :param wordcount: wordcount of the data the tokenization should be applied to given by the function 'count_words'.
     :param threshold: optional threshold defining words to be summarized into the token '0'
-                      if the wordoccurence is below the threshold
+                      if the wordoccurence is not above the threshold
     :return: dict containing word:token
     """
-    alphabet = {}
+    tokenization = {}
 
     i = 1  # next free token (0 is reserved for collection of words defined by threshold)
-    for word in tqdm(wordcount, desc="create alphabet"):
+    for word in tqdm(wordcount, desc="create tokenization"):
         if not len(word):  # skip empty word
             continue
-        if threshold is not None and wordcount[word] <= threshold:  # word below threshold -> token: 0
-            alphabet[word] = 0
-        else:  # word not below threshold -> token: [next free token]
-            alphabet[word] = i
+        if threshold is not None and wordcount[word] <= threshold:  # word not above threshold -> token: 0
+            tokenization[word] = 0
+        else:  # word above threshold -> token: [next free token]
+            tokenization[word] = i
             i += 1
 
-    return alphabet
+    return tokenization
 
 
-def create_test_alphabet(train_alphabet: dict, test_wordcount: dict):
-    """ This function extends the alphabet of the train data to be applicable to the test data
+def extend_tokenization(train_tokenization: dict, test_wordcount: dict):
+    """ This function extends the tokenization of the train data to be applicable to the test data
     by adding all unknown words to the collective token 0.
 
-    :param train_alphabet: alphabet of train data to be extended
+    :param train_tokenization: tokenization of train data to be extended
     :param test_wordcount: wordcount of test data given by the function 'count_words(test data)'.
-    :return: extended alphabet containing all words of the test data (dict word:token)
+    :return: extended tokenization containing all words of the test data (dict word:token)
     """
-    alphabet = train_alphabet  # copy already known words
+    tokenization = train_tokenization  # copy already known words
 
-    for word in tqdm(test_wordcount, desc="create test alphabet"):
+    for word in tqdm(test_wordcount, desc="extend tokenization"):
         if not len(word):  # skip empty word
             continue
-        if word not in alphabet:  # extend alphabet by adding unknown words to the collective token 0
-            alphabet[word] = 0
+        if word not in tokenization:  # extend tokenization by adding unknown words to the collective token 0
+            tokenization[word] = 0
 
-    return alphabet
+    return tokenization
 
 
-def get_wordcount(lines: tuple, alphabet: dict):
-    """This function is a faster version of count_words if the alphabet is already known
+def get_wordcount(lines: tuple, tokenization: dict):
+    """This function is a faster version of count_words if the tokenization is already known
     :param lines: data in form tuple of tuples of words/punctuation
-    :param alphabet: alphabet of data
+    :param tokenization: tokenization of data
     :return: dict containing word:count
     """
     print("counting words")
-    count = {word: 0 for word in alphabet}
+    count = {word: 0 for word in tokenization}
     for line in tqdm(lines):
         for word in line:
             if word is not '':
@@ -150,14 +150,14 @@ def get_wordcount(lines: tuple, alphabet: dict):
     return count
 
 
-def create_tokenset(lines: tuple, alphabet: dict):
-    """This function creates a token set by translating words into tokens according to the given alphabet.
+def create_tokenset(lines: tuple, tokenization: dict):
+    """This function creates a token set by translating words into tokens according to the given tokenization.
 
     :param lines: lines to be translated (form: tuple of tuples of words/punctuation)
-    :param alphabet: alphabet containing all words occurring in lines
+    :param tokenization: tokenization containing all words occurring in lines
     :return: tuple of tuples of tokens
     """
-    return tuple([tuple([alphabet.get(word) for word in line if word is not ''])
+    return tuple([tuple([tokenization.get(word) for word in line if word is not ''])
                   for line in tqdm(lines, desc="create tokenset")])
 
 

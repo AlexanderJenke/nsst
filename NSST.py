@@ -129,15 +129,15 @@ class NSST:
     """This NSST stores a set of rules accessible over the tuple (current_state, token, num_reg)
     """
 
-    def __init__(self, alphabet_src=[], alphabet_tgt=[]):
-        """init the nsst by generating lookup tables (LUT) for the given alphabets
-        :param alphabet_src: source language alphabet
-        :param alphabet_tgt: target language alphabet
+    def __init__(self, tokenization_src={}, tokenization_tgt={}):
+        """init the nsst by generating lookup tables (LUT) for the given tokenizations
+        :param tokenization_src: source language tokenization
+        :param tokenization_tgt: target language tokenization
         """
-        self.alphabet_src = alphabet_src
-        self.alphabet_tgt = alphabet_tgt
-        self.alphabet_src_lut = {self.alphabet_src[key]: key for key in self.alphabet_src}
-        self.alphabet_tgt_lut = {self.alphabet_tgt[key]: key for key in self.alphabet_tgt}
+        self.tokenization_src = tokenization_src
+        self.tokenization_tgt = tokenization_tgt
+        self.tokenization_src_lut = {self.tokenization_src[key]: key for key in self.tokenization_src}
+        self.tokenization_tgt_lut = {self.tokenization_tgt[key]: key for key in self.tokenization_tgt}
         self.rules = {}  # dict used to look up rules faster (get_rules function)
         self.all_rules = []  # list of all rules
 
@@ -207,18 +207,18 @@ class NSST:
         rules_io = StringIO()
         self.save_rules(rules_io)  # generate human readable list of all rules
         rules = rules_io.getvalue()
-        # combine the rules & alphabets in a dict to be saved
+        # combine the rules & tokenizations in a dict to be saved
         nsst_d = {
             'rules': rules,
-            'alphabet_src': self.alphabet_src,
-            'alphabet_tgt': self.alphabet_tgt,
+            'tokenization_src': self.tokenization_src,
+            'tokenization_tgt': self.tokenization_tgt,
         }
         with open(file, 'wb') as f:
             pickle.dump(nsst_d, f)  # save the dict
 
     def load(self, file, doCheckRules=False):
         """ Load a nsst from file
-        :param file: file containing a pickled dict containing the alphabets and rules
+        :param file: file containing a pickled dict containing the tokenizations and rules
         :param doCheckRules: bool, check the rules for duplicates on loading
         """
         with open(file, 'rb') as f:
@@ -228,11 +228,11 @@ class NSST:
         rules_io = StringIO(nsst_d['rules'])
         self.load_rules(rules_io, doCheckRules=doCheckRules)
 
-        # load the alphabets and generate LUTs
-        self.alphabet_src = nsst_d['alphabet_src']
-        self.alphabet_tgt = nsst_d['alphabet_tgt']
-        self.alphabet_src_lut = {self.alphabet_src[key]: key for key in self.alphabet_src}
-        self.alphabet_tgt_lut = {self.alphabet_tgt[key]: key for key in self.alphabet_tgt}
+        # load the tokenizations and generate LUTs
+        self.tokenization_src = nsst_d['tokenization_src']
+        self.tokenization_tgt = nsst_d['tokenization_tgt']
+        self.tokenization_src_lut = {self.tokenization_src[key]: key for key in self.tokenization_src}
+        self.tokenization_tgt_lut = {self.tokenization_tgt[key]: key for key in self.tokenization_tgt}
 
 
 class MinimalNSST(NSST):

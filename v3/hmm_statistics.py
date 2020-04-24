@@ -19,8 +19,8 @@ def main(MODEL_PATH):
     del lines
     trainWordcount = e_dl.count_words(trainLines)
     testWordcount = e_dl.count_words(testLines)
-    trainAlphabet = e_dl.create_alphabet(trainWordcount, threshold=THRESHOLD)
-    testAlphabet = e_dl.create_test_alphabet(trainAlphabet, testWordcount)
+    trainAlphabet = e_dl.create_tokenization(trainWordcount, threshold=THRESHOLD)
+    testAlphabet = e_dl.extend_tokenization(trainAlphabet, testWordcount)
 
     '''
     # prepare tokens

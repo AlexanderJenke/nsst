@@ -46,14 +46,14 @@ del lines  # free space
 trainWordcount = e_dl.count_words(trainLines)
 testWordcount = e_dl.count_words(testLines)
 
-# create alphabets & save them to the output directory
-trainAlphabet = e_dl.create_alphabet(trainWordcount, threshold=args.threshold)
-testAlphabet = e_dl.create_test_alphabet(trainAlphabet, testWordcount)
-with open(os.path.join(args.output, f"alphabet_tss{args.train_step_size}_th{args.threshold}.pkl"), 'wb') as file:
-    pickle.dump(testAlphabet, file)
+# create tokenizations & save them to the output directory
+trainTokenization = e_dl.create_tokenization(trainWordcount, threshold=args.threshold)
+testTokenization = e_dl.extend_tokenization(trainTokenization, testWordcount)
+with open(os.path.join(args.output, f"tokenization_tss{args.train_step_size}_th{args.threshold}.pkl"), 'wb') as file:
+    pickle.dump(testTokenization, file)
 
 # prepare tokens to be passed to the HMM
-lines_X = [[[trainAlphabet[word]] for word in line if len(word)]
+lines_X = [[[trainTokenization[word]] for word in line if len(word)]
            for line in tqdm(trainLines, desc="trainTokenSet") if
            len(line) > 1 or (len(line) == 1 and len(line[0]))]
 len_X = [len(line) for line in lines_X]
@@ -61,7 +61,7 @@ X = np.concatenate(lines_X)
 
 del trainLines  # free space
 
-lines_Y = [[[testAlphabet[word]] for word in line if len(word)]
+lines_Y = [[[testTokenization[word]] for word in line if len(word)]
            for line in tqdm(testLines, desc="testTokenSet") if
            len(line) > 1 or (len(line) == 1 and len(line[0]))]
 len_Y = [len(line) for line in lines_Y]
@@ -72,7 +72,7 @@ del testLines  # free space
 # setup the hidden markov model
 model = MultiThreadFit(n_components=args.states, n_iter=args.iterations_per_score,
                        num_workers=args.num_workers)  # save & score every ips iterations
-model.n_features = len(trainAlphabet)  # number of features = number of tokens
+model.n_features = len(trainTokenization)  # number of features = number of tokens
 model.transmat_ = np.random.random([model.n_components, model.n_components])  # init transition probability matrix
 model.startprob_ = np.asarray([1 / args.states for _ in range(args.states)])  # init start probability matrix
 model.emissionprob_ = np.random.random([model.n_components, model.n_features])  # init emission probability matrix
