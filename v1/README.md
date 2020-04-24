@@ -1,6 +1,0 @@
-# NSST
-
-## Dependencies
-- hmmlearn
-- numpy
-- 

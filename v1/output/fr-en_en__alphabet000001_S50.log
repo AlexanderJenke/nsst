@@ -1,5 +1,0 @@
-ROOT output/fr-en.en/
-N_STATES 50
-N_ITER 25
-len(traindata) 2004
-Score(testdata) = -inf
