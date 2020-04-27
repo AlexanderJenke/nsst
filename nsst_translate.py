@@ -13,7 +13,11 @@ assert (TbXMonitor is not None)  # to keep import
 
 
 def brute_force(args):
-    src = input("Schreibe einen Satz:\n")
+    # read input sentence, if not given in args
+    if args.input is None:
+        src = input("Schreibe einen Satz:\n")
+    else:
+        src = args.input
 
     start_time = time.time()
 
@@ -58,8 +62,11 @@ def hmm(args):
         hmm_model = pickle.load(file)
     """ :type hmm_model: MultiThreadFit"""
 
-    # read input sentence
-    src = input("Schreibe einen Satz:\n")
+    # read input sentence, if not given in args
+    if args.input is None:
+        src = input("Schreibe einen Satz:\n")
+    else:
+        src = args.input
 
     start_time = time.time()
 
@@ -116,6 +123,7 @@ if __name__ == '__main__':
                         help="translation mode: ['brute_force', 'hmm']\n"
                              "    brute_force: try all possible rule sequences (very slow and high memory usage)\n"
                              "    hmm: hmm provides most likely state sequence, only use applicable rules (translation probability incorrect)")
+    parser.add_argument("-i", "--input", default=None)
     args = parser.parse_args()
 
     nsst = NSST.NSST()
