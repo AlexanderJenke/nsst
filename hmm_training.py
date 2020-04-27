@@ -32,7 +32,7 @@ parser.add_argument("--num_workers", default=16, type=int,
                     help="Maximal number of threads running in parallel while training, default: 16")
 args = parser.parse_args()
 
-name = f"{os.path.basename(args.input)}_tss{args.train_step_size}_th{args.threshold}_nSt{args.states}_nIt{args.iterations}"
+name = f"hmm_{os.path.basename(args.input)}_tss{args.train_step_size}_th{args.threshold}_nSt{args.states}_nIt{args.iterations}"
 
 # load data
 lines = e_dl.load_clean_dataset(args.input)

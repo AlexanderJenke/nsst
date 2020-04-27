@@ -1,4 +1,6 @@
 import pickle
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 import numpy as np
 from tqdm import tqdm
@@ -8,18 +10,16 @@ import europarl_dataloader as e_dl
 from HMM import TbXMonitor
 
 assert (TbXMonitor is not None)  # to keep import
-from threading import Lock
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 create_rule_lock = Lock()  # create only one Rule at a time -> prevent race conditions on rule counter
 
 
-def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, nsst):
+def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, hmm, nsst):
     """ This function creates translation rules for every token in  a given sentence pair, corresponding alignment
     and state sequence given by the HMM.
     :param sentence_pair: line containing source and target sentence separated by '|||'
     :param alignment_line: total alignment formatted according to fast_align, describing the sentence pair
-    :param model: HMM object
+    :param hmm: HMM object
     :param nsst: nsst object managing the rules
     """
     sentence_src, sentence_tgt = sentence_pair[1:-2].split(" ||| ")  # separate src and tgt sentence
@@ -30,12 +30,12 @@ def createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, ns
     tokens_tgt = [[nsst.tokenization_tgt[word]] for word in sentence_tgt.split(" ") if len(word)]
 
     # get most likely state sequence of the source sentence
-    states_src = model.decode(tokens_src)[1]
+    states_src = hmm.decode(tokens_src)[1]
 
     if doAppendQf:
-        states_src = np.concatenate([states_src, [-1]])  # append a final state (-1) -> q-q-q-qf
+        states_src = np.concatenate([states_src, [-1]])  # append final state qf := -1 -> q-q-q-qf
     else:
-        states_src = np.concatenate([[-1], states_src])  # append start state q0(-1) -> q0-q-q-q
+        states_src = np.concatenate([[-1], states_src])  # append start state q0 := -1 -> q0-q-q-q
 
     # initialize the given spans as empty
     current_spans = ()
@@ -100,9 +100,9 @@ if __name__ == '__main__':
     parser.add_argument("-mt", "--multi_threading", default=True)
     parser.add_argument("-qf", "--AppendQf", default=False,
                         help="extend state order with final state, else use initial state")
-    parser.add_argument("-align", "--alignment_file", default="output/forward.N.tss20.align")
+    parser.add_argument("-align", "--alignment_file", default="output/europarl-v7.de-en.tss20.align")
     parser.add_argument("-pair", "--paired_language_file", default="output/europarl-v7.de-en.tss20.paired")
-    parser.add_argument("-model", "--model_file", default="output/tss20_th4_nSt200_nIt101.pkl")
+    parser.add_argument("-hmm", "--hmm_file", default="output/hmm_tss20_th4_nSt200_nIt101.pkl")
     parser.add_argument("-tokenization", "--tokenization_file", default="output/tokenization_tss20_th4.pkl")
     parser.add_argument("-nsst", "--nsst_output_file", default="output/nsst_tss20_th4_nSt200_Q0.pkl")
     args = parser.parse_args()
@@ -110,9 +110,9 @@ if __name__ == '__main__':
     doAppendQf = args.AppendQf  # append final state? else append start state
 
     # load HMM
-    with open(args.model_file, 'rb') as file:
-        model = pickle.load(file)
-    """ :type model: MultiThreadFit"""
+    with open(args.hmm_file, 'rb') as file:
+        hmm = pickle.load(file)
+    """ :type hmm: MultiThreadFit"""
 
     # load tokenization used with HMM
     with open(args.tokenization_file, 'rb') as file:
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                 with ThreadPoolExecutor() as executor:
                     # create jobs
                     jobs = [
-                        executor.submit(createRules_mostLikelyStateSequence, sentence_pair, alignment_line, model, nsst)
+                        executor.submit(createRules_mostLikelyStateSequence, sentence_pair, alignment_line, hmm, nsst)
                         for sentence_pair, alignment_line in tqdm(zip(sentence_pairs, alignments),
                                                                   desc="create job per sentence pair")]
                     # wait for the jobs to finish
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             else:
                 for sentence_pair, alignment_line in tqdm(zip(sentence_pairs, alignments),
                                                           desc="process sentence pairs"):
-                    createRules_mostLikelyStateSequence(sentence_pair, alignment_line, model, nsst)
+                    createRules_mostLikelyStateSequence(sentence_pair, alignment_line, hmm, nsst)
 
     # save the nsst (containing the generated rules)
     nsst.save(args.nsst_output_file)
