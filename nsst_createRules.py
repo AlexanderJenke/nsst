@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("-mt", "--multi_threading", default=True)
     parser.add_argument("-qf", "--AppendQf", default=False,
-                        help="extend state order with final state, else use initial state")
+                        help="extend state order with final state, else use initial state, default: initial state")
     parser.add_argument("-align", "--alignment_file", default="output/europarl-v7.de-en.tss20.align")
     parser.add_argument("-pair", "--paired_language_file", default="output/europarl-v7.de-en.tss20.paired")
     parser.add_argument("-hmm", "--hmm_file", default="output/hmm_tss20_th4_nSt200_nIt101.pkl")
