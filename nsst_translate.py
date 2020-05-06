@@ -65,6 +65,49 @@ def brute_force(args):
     return i
 
 
+def best_rule(args):
+    """ only use the best rule per token """
+
+    # read input sentence, if not given in args
+    if args.input is None:
+        src = input("Schreibe einen Satz:\n")
+    else:
+        src = args.input
+
+    start_time = time.time()
+
+    # create tokenization for input sentence
+    token_src = [nsst.tokenization_src[word] if word in nsst.tokenization_src else 0 for word in src.split(" ") if
+                 len(word)]
+
+    # initialize Register
+    i = (-1, (), 1)  # ((initial state q0, register, prob),)
+
+    # iterate over input sentence tokens
+    for t in tqdm(token_src, desc=f"Translating"):
+        q, reg, prob = i
+        # get all applicable rules (current state, token and required number of registers match)
+        if (q, t, len(reg)) in nsst.rules:
+            # all applicable rules (current state, input token & number of required registers match)
+            rules = nsst.rules[(q, t, len(reg))]
+
+            # calculate total count of all applicable rules to later calculate the probability of a single rule
+            sum_rules = sum(rules)
+
+            rule = sorted(rules, key=lambda x: x.count, reverse=True)[0]  # select best rule
+
+            q_n, reg_n = rule(*reg)  # apply rule
+            r_prob = rule.count / sum_rules  # rule probability = rule count / all counts
+
+            i = (q_n, reg_n, prob * r_prob)  # update current state, register & probability
+        else:
+            raise RuntimeError(f"Found no applicable rule for q={q}, reg={reg}, t={t}!")
+
+    print(f"\nTranslated in {time.time() - start_time:.3f}s")
+
+    return (i,)
+
+
 def hmm(args):
     """ hmm provides most likely state sequence, only use applicable rules """
 
@@ -134,14 +177,15 @@ def hmm(args):
 if __name__ == '__main__':
     # read parameters
     parser = ArgumentParser()
-    parser.add_argument("--nsst", default="output/nsst_tss20_th4_nSt200_Qf.pkl", help="nsst file")
+    parser.add_argument("--nsst", default="output/nsst_tss20_th4_nSt200_Q0.pkl", help="nsst file")
     parser.add_argument("--hmm", default="output/hmm_tss20_th4_nSt200_nIt101.pkl",
                         help="hmm file (required for mode=hmm)")
     parser.add_argument("--mode",
                         default="hmm",
                         help="translation mode: ['brute_force', 'hmm']\n"
                              "    brute_force: try all possible rule sequences (very slow and high memory usage)\n"
-                             "    hmm: hmm provides most likely state sequence, only use applicable rules (translation probability incorrect)")
+                             "    hmm: hmm provides most likely state sequence, only use applicable rules (translation probability incorrect)\n"
+                             "    best_rule: only use the best rule per token")
     parser.add_argument("-i", "--input", default=None)
     args = parser.parse_args()
 
@@ -156,6 +200,12 @@ if __name__ == '__main__':
         result = brute_force(args)
     elif args.mode == "hmm":
         result = hmm(args)
+    elif args.mode == "best_rule":
+        result = best_rule(args)
+    else:
+        print("UNKNOWN MODE!")
+        parser.print_help()
+        exit()
 
     # get best translations
     print(f"{len(result)} verschiedene Endzustände")
