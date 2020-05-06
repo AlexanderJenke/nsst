@@ -13,6 +13,8 @@ assert (TbXMonitor is not None)  # to keep import
 
 
 def brute_force(args):
+    """ try all possible rule sequences """
+
     # read input sentence, if not given in args
     if args.input is None:
         src = input("Schreibe einen Satz:\n")
@@ -21,17 +23,24 @@ def brute_force(args):
 
     start_time = time.time()
 
+    # create tokenization for input sentence
     token_src = [nsst.tokenization_src[word] if word in nsst.tokenization_src else 0 for word in src.split(" ") if
                  len(word)]
-    i = ((-1, (), 1),)  # ((q0, reg, prob),)
+
+    # initialize Register
+    i = ((-1, (), 1),)  # ((initial state q0, register, prob),)
     o = {}
 
+    # iterate over input sentence tokens
     for t in token_src:
-        for q, reg, prob in tqdm(i,
-                                 desc=f"Apply rules to token '{t}'"):
+
+        # iterate over possible nsst states
+        for q, reg, prob in tqdm(i, desc=f"Apply rules to token '{t}'"):
+
             # get all applicable rules (current state, token and required number of registers match)
             if (q, t, len(reg)) in nsst.rules:
-                # all applicable rules
+
+                # all applicable rules (current state, input token & number of required registers match)
                 rules = nsst.rules[(q, t, len(reg))]
 
                 # calculate total count of all applicable rules to later calculate the probability of a single rule
@@ -57,6 +66,8 @@ def brute_force(args):
 
 
 def hmm(args):
+    """ hmm provides most likely state sequence, only use applicable rules """
+
     # load HMM
     with open(args.hmm, 'rb') as file:
         hmm_model = pickle.load(file)
@@ -70,25 +81,32 @@ def hmm(args):
 
     start_time = time.time()
 
+    # create tokenization for input sentence
     token_src = [[nsst.tokenization_src[word]] if word in nsst.tokenization_src else [0] for word in src.split(" ") if
                  len(word)]
 
+    # hmm calculates the best state sequence
     states_src = []
     if 'Q0' in args.nsst:
         states_src = np.concatenate([[-1], hmm_model.decode(token_src)[1]])  # append start state q0 := -1 -> q0-q-q-q
     elif 'Qf' in args.nsst:
         states_src = np.concatenate([hmm_model.decode(token_src)[1], [-1]])  # append final state qf := -1 -> q-q-q-qf
 
-    i = (((), 1),)  # ((reg, prob),)
+    # initialize Register
+    i = (((), 1),)  # ((register, prob),)
     o = {}
 
+    # iterate over tuple of input sentence tokens, current state & next state
     for token, q, qn in zip(token_src, states_src[:-1], states_src[1:]):
         t = token[0]
-        for reg, prob in tqdm(i,
-                              desc=f"Apply rules to token '{t}'"):
+
+        # iterate over possible nsst states
+        for reg, prob in tqdm(i, desc=f"Apply rules to token '{t}'"):
+
             # get all applicable rules (current state, token and required number of registers match)
             if (q, t, len(reg)) in nsst.rules:
-                # all applicable rules
+
+                # all applicable rules (current state, next state, input token & number of required registers match)
                 rules = [rule for rule in nsst.rules[(q, t, len(reg))]
                          if rule.next_state == qn]  # only allow rules ending up in the right next state
 
@@ -114,6 +132,7 @@ def hmm(args):
 
 
 if __name__ == '__main__':
+    # read parameters
     parser = ArgumentParser()
     parser.add_argument("--nsst", default="output/nsst_tss20_th4_nSt200_Qf.pkl", help="nsst file")
     parser.add_argument("--hmm", default="output/hmm_tss20_th4_nSt200_nIt101.pkl",
@@ -126,9 +145,11 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--input", default=None)
     args = parser.parse_args()
 
+    # load NSST
     nsst = NSST.NSST()
     nsst.load(args.nsst, doCheckRules=False)
 
+    # run translation
     result = None
     print(f"mode: {args.mode}")
     if args.mode == "brute_force":
