@@ -100,16 +100,20 @@ class Rule:
         for reg in self._reg_op:  # for every register operation in the register operations
             register = ""  # init empty register
             for op in reg:  # for single operation in the register operation
-                # copy given register if operations starts with 'x' (marking the copy register operation)
-                if op[:1] == "x":
-                    if len(args) > int(op[1:]) - 1:  # ensure the requested register is actually given, else ignore
-                        register += f"{args[int(op[1:]) - 1]}"
-                    else:
-                        raise ReferenceError(
-                            f"Tried to access register {int(op[1:]) - 1} but only registers 0-{len(args) - 1} exist!")
 
-                # generate token according to the register operation (operation not starting with 'x')
+                if op[:1] == "x":
+                    # copy given register if operations starts with 'x' (marking the copy register operation)
+                    if len(args) > int(op[1:]):  # ensure the requested register is actually given, else ignore
+                        register += f"{args[int(op[1:])]}"
+
+                    # else:
+                    #     print(f"WARNING: \n"
+                    #           f"Rule '{str(self)}' tried to access register {int(op[1:])} but "
+                    #           f"{f'only registers 0-{len(args) - 1} are already filled' if len(args) > 0 else 'all registers are still empty'}!\n"
+                    #           f"Using empty string as register content.")
+
                 else:
+                    # generate token according to the register operation (operation not starting with 'x')
                     register += f"{op} "
 
             registers += (register,)  # append register to target registers
@@ -163,10 +167,16 @@ class NSST:
                                                       'next_state': qn,
                                                       'register_operations': reg_op} for r in
                                                 self.rules)):  # add new rule
+
                 self.all_rules.append(rule)  # add to list of rules
+
                 if (q, t, num_reg) not in self.rules:
                     self.rules[(q, t, num_reg)] = []
                 self.rules[(q, t, num_reg)].append(rule)  # add to dict of rules
+
+                if (q, t) not in self.rules:
+                    self.rules[(q, t)] = []
+                self.rules[(q, t)].append(rule)  # add to dict of rules (ignore number of required registers)
 
             # rule exists in nsst -> increase count
             else:
