@@ -7,6 +7,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--csv", default="output/nsst_stat_54Q0.csv")
     args = parser.parse_args()
+    print(args.csv)
 
     refs = []
     hyps = []

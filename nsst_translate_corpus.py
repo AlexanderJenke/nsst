@@ -7,12 +7,12 @@ from nsst_translate import best_transition_sequence
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--nsst_file", default="output/nsst_tss20_th4_nSt200_Q0.pkl", help="nsst file")
+    parser.add_argument("--nsst_file", default="output/nsst_tss20_th4_nSt100_Q0.pkl", help="nsst file")
     parser.add_argument("--src_lang", default="output/europarl-v7.de-en.de.clean")
     parser.add_argument("--tgt_lang", default="output/europarl-v7.de-en.en.clean")
-    parser.add_argument("--output", default=f"output/nsst_stat_200Q0.csv")
+    parser.add_argument("--enforce_n_reg", default=True)
+    parser.add_argument("--output", default=f"output/nsst_stat_nreg_100Q0.csv")
     args = parser.parse_args()
-    args.enforce_n_reg = False
     args.enforce_n_final_reg = False
 
     # load NSST
