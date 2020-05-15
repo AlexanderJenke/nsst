@@ -23,7 +23,7 @@ def brute_force(args):
     """ try all possible rule sequences """
 
     # initialize Register
-    i = ((-1, (), 1),)  # ((initial state q0, register, prob),)
+    i = ((-1, (), 1),)  # ((initial state q0-1, register, prob),)
     o = {}
 
     # iterate over input sentence tokens
@@ -65,7 +65,7 @@ def best_rule(args):
     """ only use the best rule per token """
 
     # initialize Register
-    i = (-1, (), 1)  # ((initial state q0, register, prob),)
+    i = (-1, (), 1)  # ((initial state q-1, register, prob),)
 
     # iterate over input sentence tokens
     for t in tqdm(args.token_src, desc=f"Translating"):
@@ -97,7 +97,7 @@ def best_transition_sequence(args):
     """ beste Transitionsreihenfolge """
 
     # initialize Register
-    i = ((-1, (), 1),)  # ((initial state q0, register, prob),)
+    i = ((-1, (), 1),)  # ((initial state q-1, register, prob),)
     o = {}
 
     # iterate over input sentence tokens

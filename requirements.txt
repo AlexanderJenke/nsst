@@ -1,5 +1,9 @@
-hmmlearn==0.2.3
+# nsst extraction
+hmmlearn>=0.2.3
 scikit-learn
 numpy
 tensorboardX
 tqdm
+# evaluation
+nltk>=3.5
+pyter3
