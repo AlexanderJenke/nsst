@@ -5,7 +5,7 @@ import pyter
 import numpy as np
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--csv", default="output/nsst_stat_54Q0.csv")
+    parser.add_argument("--csv", default="output/nsst_stat_nreg_200Q0.csv")
     args = parser.parse_args()
     print(args.csv)
 
