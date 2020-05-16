@@ -10,6 +10,8 @@
 - numpy
 - tensorboardX
 - tqdm
+- nltk >= 3.5
+- pyter3
 
 ## Files
 
