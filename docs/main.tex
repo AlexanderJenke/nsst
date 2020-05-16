@@ -32,9 +32,6 @@ Der entwickelte Code ist auf \hyperlink{https://github.com/AlexanderJenke/nsst}{
 
 \IEEEpeerreviewmaketitle
 
-\section{Motivation}
-\textcolor{red}{TODO\\ ist eine Motivation sinnvoll/notwendig, oder ist es besser direkt mit der Aufgabenstellung zu beginnen?}
-
 \section{Aufgabenstellung}
 Ziel des Praktikums ist die Extraktion eines gewichteten nichtdeterministischen Streaming-String-Transducer (NSST) aus einem bilingualen Korpus.
 Hierfür sind in der Aufgabenstellung folgende Aufgabenteile definiert:
@@ -43,7 +40,7 @@ Hierfür sind in der Aufgabenstellung folgende Aufgabenteile definiert:
     \item[1.] Vorbereiten eines bilingualen Europarl-Korpus zur Weiterverarbeitung, wobei nicht zur Sprache gehörende Artefakte entfernt sowie Wörter und Satzzeichen in Token aufgeteilt werden sollen.
     \item[2.] Trainieren eines Hidden-Markov-Model (HMM) auf die Quellsprache und anschließende Extraktion eines endlichen Automaten, welcher die Sprache erkennt.
     \item[3.] Generieren eines totalen Alignments mittels einer geeigneten Methode
-    \item[4.] Extraktion und lesbares Speichern der NSST-Regeln mittels Korpus, endlichem Automaten und Alignments
+    \item[4.] Extraktion und lesbares Speichern des NSST aus Korpus, endlichem Automaten und Alignments
 \end{itemize}
 
 \section{Übersicht}
@@ -115,17 +112,17 @@ Entsprechend Teilaufgabe 2 wird durch Ausführen des \textit{hmm\_training.py}-S
 Das HMM kann als 5-Tupel definiert werden \cite{hmm->wfsm}:
 \begin{equation}\notag
 \begin{aligned}
-HMM &= (Q, \Sigma, I, T, E) && \text{, mit} \\
-Q &= \{ q_0, q_1, ...\} \\
-\Sigma &= \{0,1,...\} \\
-I &= Q \rightarrow \mathbb{R}^+ \\
-T &= Q \times Q \rightarrow \mathbb{R}^+ \\
-E &= Q \times \Sigma \rightarrow \mathbb{R}^+ \\
+HMM &= (Q_H, \Sigma_H, I_H, T_H, E_H) && \text{, mit} \\
+Q_H &= \{ q_0, q_1, ..., q_n\} \\
+\Sigma_H &= \{0,1,..., m\} \\
+I_H &= Q_H \rightarrow \mathbb{R}^+ \\
+T_H &= Q_H \times Q_H \rightarrow \mathbb{R}^+ \\
+E_H &= Q_H \times \Sigma_H \rightarrow \mathbb{R}^+ \\
 \end{aligned}
 \end{equation}
-Hierbei ist $Q$ die Menge der Zustände, $\Sigma$ die Menge der Token (Alphabet), $I$ die Startwahrscheinlichkeit der Zustände, $T$ die Übergangswahrscheinlichkeit von einem Zustand zum nächsten und $E$ die Emissionswahrscheinlichkeit eines Token in einem Zustand \cite{hmm->wfsm}.
+Hierbei ist $Q_H$ eine endliche Menge von Zustände, $\Sigma_H$ eine endliche Menge von Token (Alphabet), $I_H$ die Startwahrscheinlichkeit der Zustände, $T_H$ die Übergangswahrscheinlichkeit von einem Zustand zum nächsten und $E_H$ die Emissionswahrscheinlichkeit eines Token in einem Zustand \cite{hmm->wfsm}.
 
-Für das Training werden die Funktionen $S$, $T$ und $E$ des HMMs zufällig initialisiert und anschließend in mehreren Iterationen durch einen EM-Algorithmus auf die Sätze des Trainingsdatensatzes angepasst \cite{hmmTraining}.
+Für das Training werden die Funktionen $I_H$, $T_H$ und $E_H$ des HMMs zufällig initialisiert und anschließend in mehreren Iterationen durch einen EM-Algorithmus auf die Sätze des Trainingsdatensatzes angepasst \cite{hmmTraining}.
 
 \subsection{Architektur}
 Das HMM ist mittels der \textit{MultinomialHMM}-Klasse des hmmlearn-Packages \cite{hmmlearn} implementiert. 
@@ -147,6 +144,14 @@ Um das Training zu beschleunigen, wurde eine MultiThreading Variante des Multino
 Diese berechnet im E-Schritt des EM-Algorithmus in mehreren Threads parallel die logarithmische Wahrscheinlichkeit der einzelnen Sätze des Trainingsdatensatzes.
 Lediglich das Akkumulieren der für den M-Schritt benötigten Statistiken wird hierbei Sequenziell ausgeführt.
 Hierdurch wird die Rechenzeit bei Verdopplung der Threads nahezu halbiert, solange die Anzahl echter Kerne nicht überschritten wird.
+
+Für jeden Eingabesatz kann mit dem HMM eine Wahrscheinlichkeit berechnet werden diese Eingabe mit einer bestimmten Zustandsreihenfolge zu lesen.
+Hierfür werden die Wahrscheinlichkeiten der Zustandsübergänge und die Emissionswahrscheinlichkeiten der Token im entsprechenden Zustand aufmultipliziert. 
+Da diese Werte sehr klein werden sind sie üblicherweise auf einer logarithmischen Skala angegeben.
+Die Summe der Wahrscheinlichkeiten aller Möglichen Pfade über eine Eingabe wird im Folgenden Log-Likelihood genannt.
+Für die Log-Likelihood über mehrere Eingabesätze wird in der verwendeten Implementierung die Wahrscheinlichkeit der einzelnen Sätze aufaddiert.
+Die Zustandsreihenfolge für einen Eingabesatz mit der höchsten Wahrscheinlichkeit wird im Folgenden die beste Zusandsfolge genannt.
+Ziel des Trainings des HMMs ist es, die Log-Likelihood der Sätze des Trainingsdatensatzes zu maximieren.
 
 \subsection{Hyperparameter}
 Ausschlaggebend für den Erfolg beim Training des HMM ist die Wahl der Hyperparameter.
@@ -199,14 +204,14 @@ Dies wird in einer fallenden Wahrscheinlichkeit der Testdaten bei steigender Wah
 In der Implementierung haben sich 100 Iterationen bewährt, da zu diesem Zeitpunkt die Wahrscheinlichkeiten nicht mehr stark stiegen und es noch nicht zu Overfitting kam. 
 
 \subsection{endlicher Automat}
-Wie in\cite{hmm->wfsm} beschreiben wird, kann aus einem HMM ein Automat abgeleitet werden, welcher die Quellsprache erkennt.
-Hierfür wird der gewichteter endlicher Automat (WFSA) wie folgt definiert:
+Wie in\cite{hmm->wfsm} beschreiben wird, kann aus einem HMM ein gewichteter endlicher Automat abgeleitet werden, welcher die selbe Quellsprache erkennt.
+Hierfür wird der Automat (WFSA) wie folgt definiert:
 \begin{equation}\notag
     \begin{aligned}
-        HMM &= (Q, \Sigma, I, T, E) \\
+        HMM &= (Q_H, \Sigma_H, I_H, T_H, E_H) \\
         WFSA &= (Q_A, \Sigma_A, \delta_A, I_A, P_A, F_A) \\
-        Q_A &= Q \cup \{q_{-1}\} \\
-        \Sigma_A &= \Sigma \\
+        Q_A &= Q_H \cup \{q_{-1}\} \\
+        \Sigma_A &= \Sigma_H \\
         \delta_A &=\{(q_{-1}, a, q) \colon I(q) \not= 0\land E(q,a) \not= 0\} \\
         \delta_A &=\{(q', a, q) \colon T(q', q) \not= 0\land E(q,a) \not= 0\} \\
         I_A(q_{-1}) &= 1 \\
@@ -215,22 +220,23 @@ Hierfür wird der gewichteter endlicher Automat (WFSA) wie folgt definiert:
         P_A(q', a, q) &= T(q', q) \cdot E(q, a)\\
         F_A(q_{-1}) &= 0 \\
         F_A(q) &= 1 \\
-        &\text{wobei } \forall q,q'\in Q,a\in \Sigma\\
+        &\text{wobei } \forall q,q'\in Q_H,a\in \Sigma_H\\
     \end{aligned}
 \end{equation}
 Hierbei ist $Q_A$ die Menge der Zustände des HMM, erweitert um den Startzustand $q_{-1}$.
 Das Alphabet $\Sigma_A$ gleicht dem HMM.
-Die Übergänge $\delta_A$ lesen ein Zeichen aus dem Alphabet und verbinden Zustände deren Transitionswahrscheinlichkeit $T$ im HMM nicht 0 ist, sowie den Startzustand mit allen Zuständen deren Startwahrscheinlichkeit $I$ nicht 0 ist.
+Die Übergänge $\delta_A$ lesen ein Zeichen aus dem Alphabet und verbinden Zustände deren Transitionswahrscheinlichkeit $T_H$ im HMM nicht 0 ist, sowie den Startzustand mit allen Zuständen deren Startwahrscheinlichkeit $I_H$ nicht 0 ist.
 Die Anfangsgewichte $I_A$ definieren den Startzustand als einzig möglichen Anfangszustand, die Endgewichte $F_A$ definieren alle Zustände außer den Startzustand als Finalzustände.
-Die Übergangsgewichte $P_A$ sind das Produkt aus der Transitionswahrscheinlichkeit $T$ mit der Emissionswahrscheinlichkeit $E$ des gelesenen Tokens im Zielzustand, wobei die Transitionswahrscheinlichkeit vom Startzustand zu einem anderen Zustand der Startwahrscheinlichkeit $I$ entspricht. Zu beachten ist, dass hierbei die Übergangsgewichte eine Probabilität der Nutzung dieser Kante angeben, für eine Interpretation als Kosten müssen die Werte von eins subtrahiert werden. 
+Die Übergangsgewichte $P_A$ sind das Produkt aus der Transitionswahrscheinlichkeit $T_H$ mit der Emissionswahrscheinlichkeit $E_H$ des gelesenen Tokens im Zielzustand, wobei die Transitionswahrscheinlichkeit vom Startzustand zu einem anderen Zustand der Startwahrscheinlichkeit $I_H$ entspricht. Zu beachten ist, dass dieser Automat die Wahrscheinlichkeit der gelesenen Eingabe berechnet.
+Daher repräsentieren die Übergangsgewichte eine Probabilität der Nutzung dieser Kante, für eine Interpretation als Kosten müssen die Werte von eins subtrahiert werden. 
 
-Der resultierende Automat kann bei der NSST-Regel-Extraktion eine Zustandsreihenfolge für die Verarbeitung des Quell-Satzes bereitstellen.
-Alternativ dazu kann direkt mit dem HMM die ideale Zustandsfolge für den zu übersetzenden Satz ermittelt werden.
+Der resultierende Automat stellt bei der NSST-Regel-Extraktion die Zustandsreihenfolge für die Verarbeitung des Quell-Satzes bereit.
+Alternativ dazu kann direkt mit dem HMM eine ideale Zustandsfolge für den zu übersetzenden Satz ermittelt werden und diese analog zur WFSA-Extraktion um einen Startzustand $q_{-1}$ ergänzt werden.
 
 \section{Alignment}
-Die Alignments verbinden die Vokabeln der Quell- und Zielsätze entsprechend ihrer semantischen Korrelation und geben somit Auskunft, welche Vokabel im Quellsatz, welche Vokabeln des Zielsatzes erzeugt. 
-Für eine Übersetzung muss jede Vokabel des Zielsatzes von genau einer Vokabel des Quellsatzes erzeugt werden, diese Eigenschaft heißt total. \\
-Sei $X$ die Menge aller Vokabeln des Quellsatzes und $Y$ die Menge aller Vokabeln des Zielsatzes, dann ist die Funktion $f(x) = y, \exists! x \in X, \forall y \in Y $ ein totales Alignment. 
+Die Alignments verbinden die Satzpositionen der Quell- und Zielsätze entsprechend ihrer semantischen Korrelation und geben somit Auskunft, welche Vokabel im Quellsatz, welche Vokabeln des Zielsatzes erzeugt. 
+Für eine Übersetzung muss jede Satzposition des Zielsatzes von genau einer Position des Quellsatzes erzeugt werden, diese Eigenschaft heißt total. \\
+Sei $X$ die Menge aller Satzpositionen des Quellsatzes und $Y$ die Menge aller Satzpositionen des Zielsatzes, dann ist die Funktion $f(x) = y, \exists! x \in X, \forall y \in Y $ ein totales Alignment. 
 
 Diese totalen Alignments werden mittels des \textit{fast\_align}-Algorithmus \cite{fast_align} generiert.
 Dieser passt durch den EM-Algorithmus ein lexikalisches Übersetzungsmodell an die eingegebenen Satzpaare an \cite{fast_align} und gibt am Ende ein Alignment pro Satz aus.
@@ -246,8 +252,9 @@ Bei nicht-Benutzung der vierten Option müssen nicht alle Satzpositionen der Zie
 
 
 \section{nichtdeterministischer Streaming-String-Transducer}
-Abschließend werden entsprechend Teilaufgabe 4, durch Ausführen des \textit{nsst\_createRules.py}-Skripts, die Regeln des NSST extrahiert.
-Hierfür werden das trainierte HMM, die verwendet Tokenization, die kombinierte Datei beider Sprachdatensätze sowie das dazugehörige Alignment verarbeitet und für jeden Satz die zur Übersetzung benötige Menge an Regeln generiert.
+Abschließend wird entsprechend Teilaufgabe 4, durch Ausführen des \textit{nsst\_createRules.py}-Skripts, der NSST extrahiert.
+Hierfür werden das trainierte HMM, die verwendet Tokenization, die kombinierte Datei beider Sprachdatensätze sowie das dazugehörige Alignment verarbeitet und für jeden Satz die zur Übersetzung benötige Menge an Transitionen generiert.
+Der damit definierte NSST kann Sätze der Quell- in die Zielsprache übersetzen.
 
 \subsection{Span}
 Anhand der Alignments wird ermittelt welche Vokabel der Quellsprache welche 
@@ -265,77 +272,179 @@ Sei $G$ eine Funktion, die für eine Quellsatzposition die Menge der durch diese
 \end{equation}
 Die Menge der Zielsatzpositionen einer Quellsatzposition lassen sich in Submengen teilen, sodass jede Submenge alle Positionen zwischen der keinsten und größten enthaltenen Satzposition enthält. Diese Submengen lassen sich durch eben diese kleinste und größte enthaltene Satzposition beschreiben.
 
-\subsection{NSST-Regel}
-Eine Regel des NSST ist eine Funktion der Form 
+\subsection{NSST}
+Die Autoren in \cite{nsst} beschreiben den nichtdeterministischer Streaming-String-Transducer als einen ein Automaten, welcher eine Eingabe ließt und für diese auf der Ausgabe eine Übersetzung generiert.
+Hierfür besitzt er ein Eingabe-Band und eine endliche Menge von String-Variablen über dem Ausgabealphabet aus welcher am Ende die Übersetzung abgelesen werden kann.
+Diese Menge wird im Folgenden Register genannt.
+Der Automat läuft einmal von links nach rechts über die Eingabe.
+In jedem Schritt ließt er ein Symbol auf der Eingabe, ändert seinen Zustand und aktualisiert mittels einem \textit{Copyless-Assignment} gleichzeitig alle String-Variablen im Register.
+Die rechte Seite dieser Assignments besteht aus einer Aneinanderreihung von String-Variablen und Zeichen des Ausgabealphabets, wobei jede String-Variable maximal einmal verwendet werden darf.
+
+Der implementierte NSST lässt sich wie Folgt definieren:
 \begin{equation}\notag
     \begin{aligned}
-        Rule: Q \times \Sigma_{src} &\times \Sigma_{tgt}^{**} \rightarrow Q \times \Sigma_{tgt}^{**}
+        NSST &= (Q_N, \Sigma_N, \Gamma_N,X_N, E_N, q_{-1}, F_N) \\
+        Q_N &= Q_A \\
+        \Sigma_N &= \Sigma_A = \Sigma_H = \{0,1,..., m\} \\
+        \Gamma_N &= \{0,1,..., o\} \\
+        X_N &= \{x_1, x_2, ... x_p\} \\
+        x_i &\in \Gamma_N^* \hspace{3cm} \forall x_i \in X_N\\
+        A &\colon X_N \rightarrow (X_N \cup \Gamma_N) \\
+        E_N & \subseteq (Q_N \times \Sigma_N \times A \times Q_N) \\
+        count &\colon E_N \rightarrow \mathbb{N}\\
+        F_N &\colon Q_N \rightarrow (X_N \cup \Gamma_N)\\
+        F_N(q) &= x_1  \hspace{3cm} \forall q \in Q_N\\
     \end{aligned}
 \end{equation}
-Sie liest einen Zustand $Q$, einen Token der Quellsprache $\Sigma_{src}$ und eine Menge von Mengen von Token der Zielsprache $\Sigma_{tgt}^{**}$ und gibt einen neuen Zustand sowie eine neue Menge von Mengen von Token.
-Die Menge von Mengen von Token wird im Folgenden Register genannt.
-Die Menge von Mengen im Register ist beliebig aber endlich.
-Im Register wird durch Aneinanderreihung von Regeln die Übersetzung des Quellsatzes zusammengesetzt.
-Hierfür wird das ausgegebene Register aus den Mengen des eingegebenen Registers und Token der Quellsprache mittels no-copy Operationen zusammengesetzt.
-Das heißt, dass eine Menge des eingegebenen Registers maximal einmal im ausgegebenen Register verwendet werden darf.
-Sind alle Token des Quellsatzes gelesen, steht in einer definierten Menge des Registers die Übersetzung.
-In der Implementierung wird hierfür die erste Menge im Register verwendet.
 
-\subsection{Regel-Extraktion}
-Zuerst wird für die Regel-Extraktion eine Zustandsreihenfolge für den Quellsatz ermittelt.
-In der Implementierung wird hierfür das Satzpaar tokenisiert und mit dem HMM die wahrscheinlichste Zustandsfolge für den Quellsatz berechnet.
-Diese wird um den Anfangszustand $q_{-1}$ ergänzt.
-Hierdurch gleicht die Anzahl der Zustandsübergänge der Anzahl der Token des Quellsatzes.
-Zum i-ten Zustandsübergang gehört entsprechend der i-te Token des Quellsatzes.
-Ein leeres Register wird initialisiert.
-Anschließend wird für jeden Zustandsübergang $q_n \rightarrow q_m$ eine Regel generiert, welche:
-\begin{itemize}
-    \item Den Zustand $q_n$ ließt
-    \item Den zugehörigen Token ließt
-    \item Den Zustand $q_m$ ausgibt
-    \item Im Ausgaberegister den Span der Satzposition des Token erzeugt
-\end{itemize}
-Der Span der Satzposition wird durch entsprechendes aneinanderreihen der Mengen des eingegebenen Register und den von dieser Position erzeugten Token erzeugt (siehe Beispiel im Anhang).
-Das Ausgaberegister wird anschließend als Eingaberegister für die nächste Regel verwendet.
-Die erzeugten Regeln werden gesammelt, existiert eine Regel bereits, wird für diese ein Zähler erhöht.
-Dieser Zähler wird bei der Übersetzung zur Berechnung der Regelwahrscheinlichkeit verwendet.
+$Q_N$ ist die endliche Menge an Zuständen und gleicht den Zuständen des aus dem HMM extrahierten WFSA.
+$\Sigma_N$ und $\Gamma_N$ sind die Ein- und Ausgabealphabete. 
+Sie werden durch die endlichen Mengen der Token von Ziel- und Quellsprache repräsentiert. Das Eingabealphabet gleicht dem Alphabet des HMM und des WFSA. 
+Das Ausgabealphabet wird durch den NSST das erste Mal verwendet, hierfür wird auf den Sätzen der Zielsprache ein Alphabet ohne Threshold generiert.
+$X_N$ ist eine endliche Menge von String-Variablen über dem Ausgabealphabet.
+Die Länge wird in der Implementierung nicht explizit definiert, sondern ergibt sich aus den extrahierten Regeln.
+$A$ ist eine Menge von Copyless-Assignments welche Registerinhalte durch Aneinanderreihungen von Registerinhalten und Zielsprachtoken definiert.
+$E_N$ ist die Menge möglicher Transitionen.
+Eine Transition besteht aus dem aktuellen Zustand, dem gelesenen Token, dem angewendete Assignment und dem daraus resultierenden neuen Zustand.
+Die Funktion $count$ ordnet jedem Assignment eine natürliche Zahl zu.
+Dieser Wert gibt an, wie oft das Assignment aus den Daten extrahiert wurde und wird zur Berechnung der Wahrscheinlichkeit des Assignments benötigt.
+$q_{-1}$ ist der Startzustand und gleicht dem Startzustand des WFSA.
+$F_N$ ist eine partielle Ausgabefunktion, welche nach dem Lesen der Eingabe abhängig vom Zustand des NSST aus dem Register die Ausgabe generiert.
+In der Implementierung wird unabhängig vom Zustand immer die erste String-Variable des Registers als Ausgabe verwendet.
+
+%Eine Regel des NSST ist eine Funktion der Form 
+%\begin{equation}\notag
+%    \begin{aligned}
+%        Rule: Q \times \Sigma_{src} &\times \Sigma_{tgt}^{**} \rightarrow Q \times \Sigma_{tgt}^{**}
+%    \end{aligned}
+%\end{equation}
+%Sie liest einen Zustand $Q$, einen Token der Quellsprache $\Sigma_{src}$ und eine Menge von Mengen von Token der Zielsprache $\Sigma_{tgt}^{**}$ und gibt einen neuen Zustand sowie eine neue Menge von Mengen von Token.
+%Die Menge von Mengen von Token wird im Folgenden Register genannt.
+%Die Menge von Mengen im Register ist beliebig aber endlich.
+%Im Register wird durch Aneinanderreihung von Regeln die Übersetzung des Quellsatzes zusammengesetzt.
+%Hierfür wird das ausgegebene Register aus den Mengen des eingegebenen Registers und Token der Quellsprache mittels no-copy Operationen zusammengesetzt.
+%Das heißt, dass eine Menge des eingegebenen Registers maximal einmal im ausgegebenen Register verwendet werden darf.
+%Sind alle Token des Quellsatzes gelesen, steht in einer definierten Menge des Registers die Übersetzung.
+%In der Implementierung wird hierfür die erste Menge im Register verwendet.
+
+\subsection{Extraktion}
+Die Hauptaufgabe bei der Extraktion des NSST besteht darin, alle notwendigen Transitionen zu ermitteln.
+Hierfür wird aus der Zustandsreihenfolge, mit welcher der WFSA den Quellsatz mit der höchsten Wahrscheinlichkeit liest, 
+und dem Alignment zwischen Quell- und Zielsatz für jeden Zustandsübergang bestimmt, wie das Register aktualisiert werden muss.
+Daraus ergeben sich die benötigten Transitionen.
+
+Sowohl der NSST als auch der WFSA, beziehungsweise das HMM, verwenden die Token der Quell- bzw. Zielsprache als Alphabete.
+Daher müssen im ersten Schritt die Sätze der Quell- und Zielsprachen mittels der übergebenen Tokenisierungen in eine automatenlesbare Form gebracht werden.
+ 
+Anschließend wird die Zustandsreihenfolge für den Quellsatz ermittelt.
+Da das implementierte HMM bereits eine Funktion zur Verfügung stellt, die wahrscheinlichste Zustandsreihenfolge für eine Tokenfolge zu ermitteln, wurde in der Implementierung darauf verzichtet diese Reihenfolge mittels dem WFSA zu ermitteln.
+Stattdessen wird, analog zur Extraktion des WFSA aus dem HMM, die durch das HMM errechnete Zustandsfolge um den einheitlich Startzustand $q_{-1}$ ergänzt.
+Unter der Annahme, dass der extrahierte WFSA und das HMM die selbe Sprache erkennen, führt die Verwendung beider Automaten auch zur selben Zustandsreihenfolge.
+
+Eine Transition enthält neben dem Zustandsübergang und dem entsprechenden Token der Quellsprache auch ein Assignment mittels welchem das Register aktualisiert wird.
+In der Implementierung wird dieses generiert, indem alle bereits generierten, direkt aufeinander folgenden Satzpositionen in einer String-Variable konkateniert werden.
+Nicht konkatenierbare Satzteile werden im Register nach aufsteigender Satzposition sortiert.
+Diese Mengen von aufeinander folgenden Satzpositionen entsprechen dem Span der gelesenen Satzposition.
+
+Für jedes Satzpaar wird zu Beginn ein leeres Register initialisiert.
+Anschließend wird für jeden Zustandsübergang im Register der Span der gelesenen Satzposition konstruiert.
+Hierfür werden bereits im Register vorhandene Satzpositionsmengen kopiert und diese mit den fehlenden, neu zu generierenden Token der Zielsprache konkateniert.
+Das Assignment gibt an, in welcher String-Variable welche String-Variablen und welche generierten Token in welcher Reihenfolge konkateniert werden.
+Da jede Satzposition des Zielsprache pro Span nur einmal vorkommen kann, sind die auf diese Weise generierten Assignments implizit copyless.
+
+Ein Beispiel für eine Assignment-Extraktion ist im Anhang zu finden.
+
+
+%Zuerst wird für die Regel-Extraktion eine Zustandsreihenfolge für den Quellsatz ermittelt.
+%In der Implementierung wird hierfür das Satzpaar tokenisiert und mit dem HMM die wahrscheinlichste Zustandsfolge für den Quellsatz berechnet.
+%Diese wird um den Anfangszustand $q_{-1}$ ergänzt.
+%Hierdurch gleicht die Anzahl der Zustandsübergänge der Anzahl der Token des Quellsatzes.
+%Zum i-ten Zustandsübergang gehört entsprechend der i-te Token des Quellsatzes.
+%Ein leeres Register wird initialisiert.
+%Anschließend wird für jeden Zustandsübergang $q_n \rightarrow q_m$ eine Regel generiert, welche:
+%\begin{itemize}
+%    \item Den Zustand $q_n$ ließt
+%    \item Den zugehörigen Token ließt
+%    \item Den Zustand $q_m$ ausgibt
+%    \item Im Ausgaberegister den Span der Satzposition des Token erzeugt
+%\end{itemize}
+%Der Span der Satzposition wird durch entsprechendes aneinanderreihen der Mengen des eingegebenen Register und den von dieser Position erzeugten Token erzeugt (siehe Beispiel im Anhang).
+%Das Ausgaberegister wird anschließend als Eingaberegister für die nächste Regel verwendet.
+%Die erzeugten Regeln werden gesammelt, existiert eine Regel bereits, wird für diese ein Zähler erhöht.
+%Dieser Zähler wird bei der Übersetzung zur Berechnung der Regelwahrscheinlichkeit verwendet.
 
 
 \section{Diskussion}
-\textcolor{red}{TODO\\
-Europarl-Probleme\\
-kumulativer Token verbesserbar\\
-semantische Validierung der Alignments notwendig\\
-'statistische' Analyse der extrahierten Regeln\\
-weitere Evaluationsergebnisse ...\\}
+\subsection{Europarl-Korpus}
+\label{korpusprobleme}
+Während der Arbeit mit dem Europarl-Korpus ist aufgefallen, dass die maschinengenerierte Zuordnung der Sätze der Quell- und Zielsprache zueinander teilweise fehlerhaft ist.
+Problematisch ist hierbei, wenn ein Satz in Sprache A einen Nebensatz enthält und diese in Sprache B durch zwei Sätze übersetzt wurde.
+Da im Europarl-Korpus nur eine 1-zu-1 Zuordnung zwischen Sätzen möglich ist, wird der Satz aus Sprache A nur teilweise Übersetzt und der Verbleibende Satz in Sprache B wird einer leeren Zeile oder einem einzelnen Punkt in Sprache A zugeordnet.
 
+Hiervon sind im verwendeten Trainingsdatensatz (TSS=20) 303 der gesamt 95806 Sätze betroffen, das entspricht lediglich 0.32\% der Sätze. 
+Daher wurde dieses Problem nicht weiter behandelt. 
+Der Einfluss dieser fehlerhaften Satzzuordnungen auf die Alignments und den letztendlich extrahierten NSST sollte in folgenden Arbeiten weiter untersucht werden.
+
+\subsection{kumulativer Token 0}
+Um die Anzahl der Token stark zu reduzieren wird bei der Erstellung der Tokenisierung der Quellsprache ein Threshold von 4 verwendet.
+Dieser Wert wurde durch eine stichprobenartige Analyse verschiedener Threshold-Werte ermittelt, somit ist nicht ausgeschlossen, dass auch semantisch relevante Worte fälschlicherweise im kumulativen Token zusammengefasst werden.
+
+Das Gebiet anderer Verfahren Token zusammenzufassen bietet viel Potential für weitere Forschungsarbeiten. 
+So ist es beispielsweise denkbar semantisch weniger interessante und selten vorkommende Worte gezielt anhand der Wortart oder alle konjugierten Formen eines Verbs zu einem Token zusammenzufassen.
+
+\subsection{Alignments}
+Die in dieser Arbeit durch den fast\_align-Algorithmus generierten Alignments sind durch die verwendeten Parameter zwingend total.
+Jedoch führen die in Kapitel \ref{korpusprobleme} erläuterten Probleme des Europarl-Korpus unausweichlich zu fehlerhaften Alignments.
+
+Die Qualität der extrahierten Alignments konnte im Rahmen dieser Arbeit nicht beurteilt werden.
+Diese sollte jedoch wegen ihrem direkten Einfluss auf die extrahierten Assignments untersucht und gegebenenfalls optimiert werden. 
+
+\subsection{extrahierte Assignments}
+Für die Trainingsdaten(TSS=20) werden für 54, 100 als auch 200 Zustände jeweils eine Millionen verschiedene Assignments generiert. 
+Hiervon lesen jeweils knapp 5\% den kumulativen Token 0.
+Für jeden anderen Token gibt es im Schnitt 17 Regeln die unterschiedliche Token der Zielsprache generieren.
+Im Schnitt wurde jede Regel 2 mal generiert.
+Die genauen Zahlen sind im Anhang zu finden.
+
+Um die extrahierten Transitionen zu evaluieren wurden die Validierungsdaten mittels der NSST übersetzt.
+Die Funktionalität hierfür ist im \textif{nsst\_translate.py}-Skript implementiert.
+Um den Rechen- und Speicheraufwand der Übersetzung zu reduzieren wurde lediglich die beste Transitionsfolge betrachtet.
+Hierfür wird bei jedem gelesenen Token für jeden erreichbaren Zustand lediglich das Register mit der besten Wahrscheinlichkeit gespeichert.
+Somit müssen bei der Verarbeitung eines gelesenen Token die möglichen Transitionen auf maximal die Menge der Zustände angewendet werden.
+Es wurde auch betrachtet inwieweit die Auswahl anwendbarer Transitionen eine Rolle spielt, so wurden einmal alle Transitionen mit passendem Zustand und Token gewählt und einmal lediglich die Transitionen die neben korrektem Zustand und Token auch exakt die Menge der String-Variablen im übergebenen Register verarbeiten.
+
+Als Übersetzung wurde der Endzustand mit der Höchsten Wahrscheinlichkeit gewählt.
+Alle anderen Endzustände wurden ignoriert.
+Alle Sätze für welche eine Übersetzung gefunden werden konnte, wurden mittels dem BLEU-Score bewertet.
+Hierbei zeigt sich, wie in Tabelle \ref{tab:bleu} zu sehen, dass eine Eingrenzung der anwendbaren Transitionen das Ergebnis verbessern. 
+Auch steigt der Score mit steigender Anzahl von Zuständen.
+Alle Ergebnisse sind auf der Scala von 0-1 bei einem maximal erreichen Ergebnis von 0,1 als schlecht zu bewerten.
+Inwieweit dieses Ergebnisses durch Verbesserungen in den bereits erläuterten Bereichen optimiert werden kann, muss noch in weiterer Forschung erarbeitet werden.
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+         & \multicolumn{2}{|c|}{ \textbf{nur Regeln mit passender}}\\
+         & \multicolumn{2}{|c|}{ \textbf{Anzahl String-Variablen}}\\
+        \hline
+        \textbf{\#Zustände} &  \hspace{0.5cm} ja \hspace{0.5cm} & nein \\
+        \hline
+        54 & 0,0725 & 0,0616\\
+        100 & 0,0816 & 0,0663\\
+        200 & \textbf{0,1081} & 0,0778\\
+        \hline
+        \multicolumn{3}{}{}
+    \end{tabular}
+    \caption{BLEU-Score auf Validierungsdaten}
+    \label{tab:bleu}
+\end{table}
 
 % references section
 \bibliographystyle{IEEEtran}
 \bibliography{P-PnS.bib}
 
 \section{Anhang}
-\subsection{Beispiel: Regel-Extraktion}
-Gegeben:\\
-Quellsatztoken:  1 1 2\\
-Zielsatztoken: 3 3 5 4 4\\
-Alignment: 0-0 0-3 1-1 1-4 2-2\\
-Zustandsfolge: $q_{-1} \rightarrow q_0 \rightarrow q_1 \rightarrow q_2$\\
-
-Extrahierte Regeln:\\
-$q_{-1} -1-> q_0$ [3, 4] / 1\\
-$q_0 -1-> q_1$ [x0 3, x1 4] / 1\\
-$q_1 -2-> q_2$ [x0 5 x1] / 1\\
-
-Hierbei ist eine Regel als \glqq Quellzustand $-$ Token $->$ Zielzustand [Registeroperation] / Zähler\grqq{}  zu lesen.
-Einzelne Mengen im Register sind durch ein Komma getrennt.
-\glqq x0\grqq{} steht für das Kopieren der ersten Menge des eingegebenen Registers.
-Integer ohne vorangestelltes \glqq x\grqq{} sind von dieser Regel erzeugte Token der Zielsprache.
-Die einzelnen, durch Leerzeichen getrennten Elemente der Registeroperationen 
-werden konkateniert, um den Inhalt der neuen Registermenge zu erzeugen.
-
-
-\subsection{Tabellen}
 \begin{table}[htbp]
     \centering
     \begin{tabular}{|c|c|c|c|c|}
@@ -385,6 +494,54 @@ werden konkateniert, um den Inhalt der neuen Registermenge zu erzeugen.
     \end{tabular}
     \caption{Auswirkung verschiedener Threshold-Werte auf den deutschen Korpus mit TSS=20}
 \end{table}
+
+\begin{figure}[htpb]
+\centering
+\includegraphics[width=3.6in]{img/example.png}
+\caption{Beispiel einer Assignment-Extraction}
+\end{figure}
+
+%Quellsatztoken:  1 1 2\\
+%Zielsatztoken: 3 3 5 4 4\\
+%Alignment: 0-0 0-3 1-1 1-4 2-2\\
+%Zustandsfolge: $q_{-1} \rightarrow q_0 \rightarrow q_1 \rightarrow q_2$\\
+%
+%Extrahierte Regeln:\\
+%$q_{-1} -1-> q_0$ [3, 4] / 1\\
+%$q_0 -1-> q_1$ [x0 3, x1 4] / 1\\
+%$q_1 -2-> q_2$ [x0 5 x1] / 1\\
+%
+%Hierbei ist eine Regel als \glqq Quellzustand $-$ Token $->$ Zielzustand [Registeroperation] / Zähler\grqq{}  zu lesen.
+%Einzelne Mengen im Register sind durch ein Komma getrennt.
+%\glqq x0\grqq{} steht für das Kopieren der ersten Menge des eingegebenen Registers.
+%Integer ohne vorangestelltes \glqq x\grqq{} sind von dieser Regel erzeugte Token der Zielsprache.
+%Die einzelnen, durch Leerzeichen getrennten Elemente der Registeroperationen werden konkateniert, um den Inhalt der neuen Registermenge zu erzeugen.
+
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{\# Zustände} & \textbf{\# Transitionen} & \textbf{$\emptyset$ versch. generierte Token pro} & \textbf{$\emptyset$ count} \\
+        &&  \textbf{gelesenem Token (mean$\pm$std)} & \\
+        \hline
+        \multicolumn{4}{|c|}{ Alle Transitionen}\\
+        \hline
+        54 & 1.142.276 & 18,999$\pm$352,684 & 2,205\\
+        100 & 1.206.374 & 18,998$\pm$352,516 & 2,088\\
+        200 & 1.271.216 & 19,021$\pm$352,996 & 1,981\\
+        \hline
+        \multicolumn{4}{|c|}{ Transitionen ohne kommutativen Token 0}\\
+        \hline
+        54 & 1.083.927 & 17,141$\pm$239,343 & 2,235\\
+        100 & 1.146.700 & 17,140$\pm$239,119 & 2,113\\
+        200 & 1.209.428 & 17,163$\pm$239,817 & 2,003\\
+        \hline
+        \multicolumn{5}{}{}
+    \end{tabular}
+    \caption{Statistik der extrahierten NSST-Transitionen}
+\end{table}
+
 
 \end{document}
 
