@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     # load NSST
     nsst = NSST.NSST()
-    nsst.load(args.nsst_file, doCheckRules=False)
+    nsst.load(args.nsst_file)
     args.nsst = nsst
 
     # open files
