@@ -9,6 +9,7 @@
 \hyphenation{}
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
+\usepackage{pdfpages}
 
 
 \IEEEoverridecommandlockouts
@@ -23,6 +24,8 @@
 }
 
 \begin{document}
+\includepdf[pages=-]{task.pdf}
+
 \maketitle
 \begin{abstract}
 \textcolor{red}{TODO}
@@ -64,7 +67,7 @@ Abschließend werden das trainierte HMM, die dabei verwendet Zuordnung von Wört
 \section{Europarl-Korpus}
 \label{Europarl-Korpus}
 Grundlage für Extraktion der NSST-Regeln bildet ein bilingualer Sprachdatensatz des Europarl-Korpus der Version 7.
-Dieser in \cite{europarl} vorgestellte Korpus enthält bilinguale Daten\-sätze wurden aus den Protokollen der Tagungen des Europäischen Parlamentes extrahiert.
+Dieser in \cite{europarl} vorgestellte Korpus enthält bilinguale Daten\-sätze, welche aus den Protokollen der Tagungen des Europäischen Parlamentes extrahiert wurden.
 Diese Protokolle sind in 11 Sprachen verfügbar und 20 der 110 möglichen Datensätze sind veröffentlicht.
 Die Protokolle im Zeitraum von April 1996 bis November 2011 wurden Blockweise aneinander ausgerichtet und in einzelne Sätze zerlegt. 
 Daraus sind Satz-Parallele bilinguale Datensätze mit rund 60 Millionen Wörtern pro Sprache generiert worden \cite{europarl:url}.
@@ -80,16 +83,16 @@ Unabhängig davon ist die Implementierung für eine Anwendbarkeit auf alle bilin
 
 \subsection{Aufbereitung}
 Entsprechend Teilaufgabe 1 werden die Europarl-Datensätze durch Ausführung des \textit{europarl\_dataloader.py}-Skripts zur Weiterverarbeitung vorbereitet.
-Hierfür lädt das Skript jeden Zeile der im Aufruf übergebenen Textdatei und bereinigt diese von allen Zeichen welche nicht explizit erwünscht sind. \\
+Hierfür lädt das Skript jede Zeile der im Aufruf übergebenen Textdatei und bereinigt diese von allen Zeichen welche nicht explizit erwünscht sind. \\
 Explizit erwünschte Zeichen sind:
 \begin{itemize}
-    \item Buchstaben des Alphabets in Groß- und Kleinschreibung
-    \item Umlaute in Groß- und Kleinschreibung, sowie ß
-    \item französische Akzente (\`{\space}, \'{\space}, \^{\space}) auf Vokalen in Groß- und Kleinschreibung
-    \item Satzzeichen: Punkt, Komma, Ausrufe- und Fragezeichen
-    \item Klammern: rund, geschweift und eckig
-    \item Schrägstrich, umgedrehter Schrägstrich und Bindestriche
-    \item Leerzeichen und Zeilenumbruch
+    \item Buchstaben des Alphabets in Groß- und Kleinschreibung,
+    \item Umlaute in Groß- und Kleinschreibung, sowie ß,
+    \item französische Akzente (\`{\space}, \'{\space}, \^{\space}) auf Vokalen in Groß- und Kleinschreibung,
+    \item Satzzeichen: Punkte, Kommata, Ausrufe- und \\ Fragezeichen,
+    \item Klammern: rund, geschweift und eckig,
+    \item Schrägstriche, umgedrehte Schrägstriche und \\ Bindestriche,
+    \item Leerzeichen und Zeilenumbrüche.
 \end{itemize}
 Außerdem werden Verschiedene Bindestriche vereinheitlicht und Satzzeichen durch Leerzeichen von Wörtern oder anderen Satzzeichen abgegrenzt, um sicherzustellen, dass diese als einzelne Satzelemente erkannt werden.
 Abschließend werden alle aufeinander folgenden Leerzeichen auf ein Leerzeichen reduziert.
@@ -99,11 +102,11 @@ Die Menge an Wörtern, Satzzeichen, Klammern und Schrägstrichen wird im Folgend
 \subsection{Tokenisierung}
 Wird das \textit{europarl\_dataloader.py}-Skript von einem anderen Skript eingebunden, stellt es neben der durch das Skript selbst genutzten Funktionalität zur Bereinigung der Sprache auch alle benötigten Funktionen zur Tokenisierung zur Verfügung.
 
-Diese Funktionen werden durch das \textit{hmm\_training.py}-Skript benutzt, um die Vokabeln der aufbereiteten Quellsprache auf maschinenlesbare Tokens zu mappen.
-Diese maschinenlesbaren Tokens werden durch nicht-negative Integer-Zahlenwerte repräsentiert.
-Für die Erstellung eines Mappings werden unter Beachtung der Groß- und Kleinschreibung die jeweiligen Vorkommen der Vokabeln im verwendeten Datensatz gezählt.
+Diese Funktionen werden durch das \textit{hmm\_training.py}-Skript genutzt, um die Vokabeln der aufbereiteten Quellsprache auf maschinenlesbare Token abzubilden.
+Diese maschinenlesbaren Tokens werden durch natürliche Zahlen repräsentiert.
+Für die Erstellung dieser Abbildung werden unter Beachtung der Groß- und Kleinschreibung die jeweiligen Vorkommen der Vokabeln im verwendeten Datensatz gezählt.
 Anschließend werden die Vokabeln der Häufigkeit nach absteigend sortiert und mit 1 beginnend durchnummeriert.
-Abweichend davon kann ein Grenzwert festgelegt werden, ab welchem Vokabeln dem Sammel-Token mit der Nummer 0 zugewiesen werden, sobald deren Häufigkeit dem Grenzwert gleichen oder diesen unterschreiten.
+Abweichend davon kann ein Grenzwert festgelegt werden, ab welchem Vokabeln dem Sammel-Token mit dem Wert 0 zugewiesen werden, sobald deren Häufigkeit dem Grenzwert gleichen oder diesen unterschreiten.
 Die daraus resultierende Funktion ist surjektiv und wird im Folgenden Tokenisierung genannt.
 Wird kein Grenzwert definiert, ist die Tokenisierung bijektiv.
 
@@ -112,15 +115,16 @@ Entsprechend Teilaufgabe 2 wird durch Ausführen des \textit{hmm\_training.py}-S
 Das HMM kann als 5-Tupel definiert werden \cite{hmm->wfsm}:
 \begin{equation}\notag
 \begin{aligned}
-HMM &= (Q_H, \Sigma_H, I_H, T_H, E_H) && \text{, mit} \\
+HMM &= (Q_H, \Sigma_H, I_H, T_H, E_H) \text{ , mit} \\
 Q_H &= \{ q_0, q_1, ..., q_n\} \\
 \Sigma_H &= \{0,1,..., m\} \\
-I_H &= Q_H \rightarrow \mathbb{R}^+ \\
-T_H &= Q_H \times Q_H \rightarrow \mathbb{R}^+ \\
-E_H &= Q_H \times \Sigma_H \rightarrow \mathbb{R}^+ \\
+I_H &\colon Q_H \rightarrow \mathbb{R}^+ \\
+T_H &\colon Q_H \times Q_H \rightarrow \mathbb{R}^+ \\
+E_H &\colon Q_H \times \Sigma_H \rightarrow \mathbb{R}^+ \\
 \end{aligned}
 \end{equation}
-Hierbei ist $Q_H$ eine endliche Menge von Zustände, $\Sigma_H$ eine endliche Menge von Token (Alphabet), $I_H$ die Startwahrscheinlichkeit der Zustände, $T_H$ die Übergangswahrscheinlichkeit von einem Zustand zum nächsten und $E_H$ die Emissionswahrscheinlichkeit eines Token in einem Zustand \cite{hmm->wfsm}.
+Hierbei ist $Q_H$ eine endliche Menge von Zustände, $\Sigma_H$ eine endliche Menge von Token (Alphabet), $I_H$ die Startwahrscheinlichkeit der Zustände, $T_H$ die Übergangswahrscheinlichkeit von einem Zustand zum nächsten und $E_H$ die Emissionswahrscheinlichkeit eines Token in einem Zustand \cite{hmm->wfsm}. 
+Dabei entspricht $n$ der Anzahl von Zuständen minus eins und $m$ der Anzahl von Token, welche durch die Tokenisierung definiert werden, minus 1.
 
 Für das Training werden die Funktionen $I_H$, $T_H$ und $E_H$ des HMMs zufällig initialisiert und anschließend in mehreren Iterationen durch einen EM-Algorithmus auf die Sätze des Trainingsdatensatzes angepasst \cite{hmmTraining}.
 
@@ -128,29 +132,32 @@ Für das Training werden die Funktionen $I_H$, $T_H$ und $E_H$ des HMMs zufälli
 Das HMM ist mittels der \textit{MultinomialHMM}-Klasse des hmmlearn-Packages \cite{hmmlearn} implementiert. 
 Dieser HMM-Typ emittiert in jedem Zustand entsprechend einer Gewichtung einen Token.
 Es kann von jedem Zustand entsprechend einer Probabilistik in jeden Zustand gewechselt werden.
-Die Anzahl der Zustände und Token kann bei der Initialisierung beliebig gewählt werden.\\
-Sei $n_s$ die Anzahl der Zustände und $n_t$ die Anzahl der Token, dann wird das HMM durch folgende drei Matrizen vollständig beschrieben:
-\begin{description}
-\item[startprob]\hfill \\
-Die $1\times n_s$-Matrix definiert die \\Startwahrscheinlichkeiten $I$ der Zustände.\\
-\item[transprob]\hfill \\
-Die $n_s\times n_s$-Matrix definiert die \\Übergangswahrscheinlichkeiten $T$ zwischen \\Zuständen.\\
-\item[emissionprob]\hfill \\
-Die $n_s\times n_t$-Matrix definiert die \\Emissionswahrscheinlichkeiten $E$ der Token.
-\end{description}
-Zustände und Token sind durch nicht-negative Integer-Werte repräsentiert und lassen sich somit direkt als Index auf die Matrizen anwenden.
+Die Anzahl der Zustände und Token kann bei der Initialisierung beliebig gewählt werden.%\\
+%Sei $n_s$ die Anzahl der Zustände und $n_t$ die Anzahl der Token, dann wird das HMM durch folgende drei Matrizen vollständig beschrieben:
+%\begin{description}
+%\item[startprob]\hfill \\
+%Die $1\times n_s$-Matrix definiert die %\\Startwahrscheinlichkeiten $I_H$ der Zustände.\\
+%\item[transprob]\hfill \\
+%Die $n_s\times n_s$-Matrix definiert die %\\Übergangswahrscheinlichkeiten $T_H$ zwischen \\Zuständen.\\
+%\item[emissionprob]\hfill \\
+%Die $n_s\times n_t$-Matrix definiert die %\\Emissionswahrscheinlichkeiten $E_H$ der Token.
+%\end{description}
+%Zustände und Token sind durch nicht-negative Integer-Werte repräsentiert und lassen sich somit direkt als Index auf die Matrizen anwenden.
 
 Um das Training zu beschleunigen, wurde eine MultiThreading Variante des MultinomialHMM implementiert.
 Diese berechnet im E-Schritt des EM-Algorithmus in mehreren Threads parallel die logarithmische Wahrscheinlichkeit der einzelnen Sätze des Trainingsdatensatzes.
 Lediglich das Akkumulieren der für den M-Schritt benötigten Statistiken wird hierbei Sequenziell ausgeführt.
 Hierdurch wird die Rechenzeit bei Verdopplung der Threads nahezu halbiert, solange die Anzahl echter Kerne nicht überschritten wird.
 
-Für jeden Eingabesatz kann mit dem HMM eine Wahrscheinlichkeit berechnet werden diese Eingabe mit einer bestimmten Zustandsreihenfolge zu lesen.
-Hierfür werden die Wahrscheinlichkeiten der Zustandsübergänge und die Emissionswahrscheinlichkeiten der Token im entsprechenden Zustand aufmultipliziert. 
+%Für jeden Eingabesatz kann mit dem HMM eine Wahrscheinlichkeit berechnet werden, die Eingabe mit einer bestimmten Zustandsreihenfolge zu lesen.
+Für jeden Eingabesatz kann eine Wahrscheinlichkeit berechnet werden mit welcher das HMM den Satz liest. 
+Diese Wahrscheinlichkeit ist die Summe der Wahrscheinlichkeiten aller Zustandsreihenfolgen mit denen der Satz gelesen werden kann.
 Da diese Werte sehr klein werden sind sie üblicherweise auf einer logarithmischen Skala angegeben.
-Die Summe der Wahrscheinlichkeiten aller Möglichen Pfade über eine Eingabe wird im Folgenden Log-Likelihood genannt.
-Für die Log-Likelihood über mehrere Eingabesätze wird in der verwendeten Implementierung die Wahrscheinlichkeit der einzelnen Sätze aufaddiert.
-Die Zustandsreihenfolge für einen Eingabesatz mit der höchsten Wahrscheinlichkeit wird im Folgenden die beste Zusandsfolge genannt.
+Diese Wahrscheinlichkeit wird Log-Likelihood genannt.
+Für die Log-Likelihood über mehrere Eingabesätze wird in der verwendeten Implementierung die Log-Likelihood der einzelnen Sätze aufaddiert.
+%Hierfür werden die Wahrscheinlichkeiten der Zustandsübergänge und die Emissionswahrscheinlichkeiten der Token im entsprechenden Zustand aufmultipliziert. 
+%Die Summe der Wahrscheinlichkeiten aller Möglichen Pfade über eine Eingabe wird im Folgenden Log-Likelihood genannt.
+Die Zustandsreihenfolge die den Eingabesatz mit der höchsten Wahrscheinlichkeit ließt wird im Folgenden die beste Zusandsfolge genannt.
 Ziel des Trainings des HMMs ist es, die Log-Likelihood der Sätze des Trainingsdatensatzes zu maximieren.
 
 \subsection{Hyperparameter}
@@ -159,37 +166,39 @@ Im Folgenden werden die zu wählenden Parameter sowie eventuelle Kriterien erlä
 
 Die \textbf{train\_step\_size (TSS)} definiert in welcher Schrittgröße über die Sätze des Datensatzes gelaufen wird. 
 Grundsätzlich sind die ersten 4096 Sätze der Evaluation des Modells vorbehalten, diese Sätze bilden den Testdatensatz. 
-Alle verbleibenden Sätze können für das Training verwendet werden, jedoch kann die Größe dieses Datensatzes reduziert werden, indem nur jeder TSS-te Satz verwendet wird. 
-Ausschlaggebend für die Wahl des TSS ist die Abwägung zwischen Speicher- und Rechenaufwand gegenüber einer ausreichenden Größe für einen repräsentativen Datensatz. 
+Alle verbleibenden Sätze können für das Training verwendet werden, jedoch kann die Größe dieses Datensatzes reduziert werden, indem nur jeder \textit{TSS}-te Satz verwendet wird. 
+Ausschlaggebend für die Wahl des \textit{TSS} ist die Abwägung zwischen Speicher- und Rechenaufwand gegenüber einer ausreichenden Größe für einen repräsentativen Datensatz. 
 Standardmäßig ist dieser Wert mit 20 implementiert.
-Der daraus resultierende Datensatz umfasst 95.806 Sätze mit 2.518.714 Vokabeln und 84.102 Token.
+Der daraus resultierende Datensatz umfasst 95.806 Sätze mit 2.518.714 Vokabelvorkommen und 84.102 Token.
 
 Der in Kapitel \ref{Europarl-Korpus} erläuterte \textbf{Threshold} reduziert die Anzahl der Token, indem seltene Vokabeln im kumulativen Token 0 zusammenfasst werden.
 Dieser Parameter ist mit einem Standardwert von 4 implementiert, da bei stichprobenartiger Auswertung auf dem verwendeten deutschen Korpus bis zu diesem Wert überwiegend Eigennamen sowie viele Verben in konjugierter Form vorgekommen sind. 
 Ab einem Wert von 5 wären vermehrt Verben in Grundform sowie beschreibende Vokabeln betroffen.
 Hierdurch reduziert sich die Zahl der Token auf 19.440.
 Somit werden 76,89\% der möglichen Token im kumulativen Token 0 zusammengefasst, jedoch wirkt sich diese Reduktion nur auf 96044 Vokabelvorkommen aus, lediglich 3,81\% der gesamten Trainingsdaten. 
-Diese Werte beziehen sich auf einen TSS von 20, eine Übersicht über die Auswirkung verschiedener Threshold-Werte und weitere TSS ist im Anhang zu finden.
+Diese Werte beziehen sich auf einen TSS von 20.
+Eine Übersicht über die Auswirkung verschiedener Threshold-Werte und weitere TSS ist in den Tabellen \ref{tab:tss1} und \ref{tab:tss20} im Anhang zu finden.
 
-Während sich die Anzahlt der Token aus dem Datensatz ergeben, muss die \textbf{Anzahl der Zustände} des HMM festgelegt werden. 
+Während sich die Anzahl der Token aus dem Datensatz ergeben, muss die \textbf{Anzahl der Zustände} des HMM festgelegt werden. 
 Da dieser Wert die Größe des HMM bestimmt, sollte er mit Bedacht gewählt werden.
 Pro Zustand entwickeln sich während dem Training verschiedene Emissionswahrscheinlichkeiten der Token, wodurch semantisch und syntaktisch korrekte Sätze eine höhere Wahrscheinlichkeit erreichen.
 Da die Zustände somit indirekt die Kontext-Information des bisherigen Satzes abbilden, muss deren Anzahl ausreichen, um die Komplexität der Quellsprache abzubilden.
 Eine Obergrenze wird durch die zu trainierenden freien Parameter und die Zahl der Datenpunkte in den Trainingsdaten gebildet.
-Sei $n_s$ die Anzahl der Zustände und $n_t$ die Anzahl der Token, so lässt sich die Anzahl freier Parameter $n_param$ wie folgt berechnen:
+Sei $n_s$ die Anzahl der Zustände und $n_t$ die Anzahl der Token, so lässt sich die Anzahl freier Parameter $n_{param}$ wie folgt berechnen:
 \begin{equation}\notag
 n_{param} = (n_s-1) + [n_s * (n_s-1)] + [n_s * (n_t-1)]
-\end{equation}
+\end{equation}\\
 Hierbei ergibt sich der erste Summand aus den Startwahrscheinlichkeiten $I$. Da diese aufsummiert eins ergeben, lässt sich der letzte Wert aus allen vorherigen bestimmen, und es bleiben $(n_s-1)$ freie Parameter.\\
 Der zweite Summand ergibt sich aus den Transitionswahrscheinlichkeiten $T$.
 Pro Zustand summieren sich die Übergangswahrscheinlichkeiten zum nächsten Zustand ebenfalls zu eins auf.
 Somit bleiben für jeden Zustand $(n_s-1)$ freie Parameter, also gesamt $[n_s * (n_s-1)]$.\\
 Der dritte Summand ergibt sich aus den Emissionswahrscheinlichkeiten $E$.
 Pro Zustand Summieren sich die Wahrscheinlichkeiten aller Token zu eins auf und es bleiben $[n_s * (n_t-1)]$ freie Parameter.\\
-Ist die Anzahl der freien Parameter größer als die Zahl der Datenpunkte, können nicht alle Parameter bestimmt werden und die Lösung ist degeneriert \cite{degenerate}.
+Ist die Anzahl der freien Parameter größer als die Zahl der Datenpunkte, können, wie in \cite{degenerate} für ein anderes Training-Objective beschrieben, nicht mehr alle Parameter bestimmt werden und die Lösung ist degeneriert.
+Da in der verwendeten Implementierung bei Überschreiten dieser Obergrenze eine Warnung ausgegeben wird, dass das Training zu einer degenerierten Lösung führt, ist davon auszugehen, dass der in \cite{degenerate} beschriebene Fall auch für das gegebene Training-Objective gilt.
 Somit führt eine größere Anzahl an Zuständen ab diesem Punkt lediglich zu einen höheren Rechenaufwand ohne neue Informationen in den Zuständen abzubilden.\\
-Die Anzahl der Datenpunkte im Datensatz entspricht der Anzahl der Vokabeln.
-Ein TSS von 20 führt zu 2.518.581 Vokabeln, ein Threshold von 4 zu 19440 Token. 
+Die Anzahl der Datenpunkte im Datensatz entspricht der Anzahl der Vokabelvorkommen.
+Ein TSS von 20 führt zu 2.518.581 Vokabelvorkommen, ein Threshold von 4 zu 19440 Token. 
 Damit liegt für diese Parameter die Obergrenze der Zustände bei 128. \\
 In der Implementierung wurde das HMM mit 10, 54, 100 und 200 Zuständen trainiert.
 Hierbei entsprechen die 54 Zustände den in \cite{germanCorpus} definierten 54 POS-Tags.
@@ -204,7 +213,8 @@ Dies wird in einer fallenden Wahrscheinlichkeit der Testdaten bei steigender Wah
 In der Implementierung haben sich 100 Iterationen bewährt, da zu diesem Zeitpunkt die Wahrscheinlichkeiten nicht mehr stark stiegen und es noch nicht zu Overfitting kam. 
 
 \subsection{endlicher Automat}
-Wie in\cite{hmm->wfsm} beschreiben wird, kann aus einem HMM ein gewichteter endlicher Automat abgeleitet werden, welcher die selbe Quellsprache erkennt.
+\label{abs:WFSA}
+Wie in\cite{hmm->wfsm} beschreiben wird, kann aus einem HMM ein gewichteter endlicher Automat abgeleitet werden, welcher die selbe Sprache erkennt.
 Hierfür wird der Automat (WFSA) wie folgt definiert:
 \begin{equation}\notag
     \begin{aligned}
@@ -212,8 +222,8 @@ Hierfür wird der Automat (WFSA) wie folgt definiert:
         WFSA &= (Q_A, \Sigma_A, \delta_A, I_A, P_A, F_A) \\
         Q_A &= Q_H \cup \{q_{-1}\} \\
         \Sigma_A &= \Sigma_H \\
-        \delta_A &=\{(q_{-1}, a, q) \colon I(q) \not= 0\land E(q,a) \not= 0\} \\
-        \delta_A &=\{(q', a, q) \colon T(q', q) \not= 0\land E(q,a) \not= 0\} \\
+        \delta_A &=\{(q_{-1}, a, q) | I(q) \not= 0\land E(q,a) \not= 0\} \\
+        \delta_A &=\{(q', a, q) | T(q', q) \not= 0\land E(q,a) \not= 0\} \\
         I_A(q_{-1}) &= 1 \\
         I_A(q) &= 0 \\
         P_A(q_{-1}, a, q) &= I(q) \cdot E(q, a)\\
@@ -227,19 +237,24 @@ Hierbei ist $Q_A$ die Menge der Zustände des HMM, erweitert um den Startzustand
 Das Alphabet $\Sigma_A$ gleicht dem HMM.
 Die Übergänge $\delta_A$ lesen ein Zeichen aus dem Alphabet und verbinden Zustände deren Transitionswahrscheinlichkeit $T_H$ im HMM nicht 0 ist, sowie den Startzustand mit allen Zuständen deren Startwahrscheinlichkeit $I_H$ nicht 0 ist.
 Die Anfangsgewichte $I_A$ definieren den Startzustand als einzig möglichen Anfangszustand, die Endgewichte $F_A$ definieren alle Zustände außer den Startzustand als Finalzustände.
-Die Übergangsgewichte $P_A$ sind das Produkt aus der Transitionswahrscheinlichkeit $T_H$ mit der Emissionswahrscheinlichkeit $E_H$ des gelesenen Tokens im Zielzustand, wobei die Transitionswahrscheinlichkeit vom Startzustand zu einem anderen Zustand der Startwahrscheinlichkeit $I_H$ entspricht. Zu beachten ist, dass dieser Automat die Wahrscheinlichkeit der gelesenen Eingabe berechnet.
-Daher repräsentieren die Übergangsgewichte eine Probabilität der Nutzung dieser Kante, für eine Interpretation als Kosten müssen die Werte von eins subtrahiert werden. 
+Die Übergangsgewichte $P_A$ sind das Produkt aus der Transitionswahrscheinlichkeit $T_H$ mit der Emissionswahrscheinlichkeit $E_H$ des gelesenen Tokens im Zielzustand, wobei die Transitionswahrscheinlichkeit vom Startzustand zu einem anderen Zustand der Startwahrscheinlichkeit $I_H$ entspricht. 
+%Zu beachten ist, dass dieser Automat die Wahrscheinlichkeit der gelesenen Eingabe berechnet.
+%Daher repräsentieren die Übergangsgewichte eine Probabilität der Nutzung dieser Kante, für eine Interpretation als Kosten müssen die Werte von eins subtrahiert werden. 
 
 Der resultierende Automat stellt bei der NSST-Regel-Extraktion die Zustandsreihenfolge für die Verarbeitung des Quell-Satzes bereit.
 Alternativ dazu kann direkt mit dem HMM eine ideale Zustandsfolge für den zu übersetzenden Satz ermittelt werden und diese analog zur WFSA-Extraktion um einen Startzustand $q_{-1}$ ergänzt werden.
 
 \section{Alignment}
-Die Alignments verbinden die Satzpositionen der Quell- und Zielsätze entsprechend ihrer semantischen Korrelation und geben somit Auskunft, welche Vokabel im Quellsatz, welche Vokabeln des Zielsatzes erzeugt. 
-Für eine Übersetzung muss jede Satzposition des Zielsatzes von genau einer Position des Quellsatzes erzeugt werden, diese Eigenschaft heißt total. \\
-Sei $X$ die Menge aller Satzpositionen des Quellsatzes und $Y$ die Menge aller Satzpositionen des Zielsatzes, dann ist die Funktion $f(x) = y, \exists! x \in X, \forall y \in Y $ ein totales Alignment. 
+%Die Alignments verbinden die Satzpositionen der Quell- und Zielsätze entsprechend ihrer semantischen Korrelation und geben somit Auskunft, welche Vokabel im Quellsatz, welche Vokabeln des Zielsatzes erzeugt. 
+Die Alignments verbinden die Satzpositionen der Quell- und Zielsätze entsprechend ihrer semantischen Bedeutung.
+Sie definieren damit, wie bei einer Übersetzung die einzelnen Wörter übersetzt werden.
+Im Folgenden soll jede Satzposition des Zielsatzes mit genau einer Position des Quellsatzes verbunden werden, diese Eigenschaft heißt total. \\
+%Sei $X$ die Menge aller Satzpositionen des Quellsatzes und $Y$ die Menge aller Satzpositionen des Zielsatzes, dann ist jede Funktion $f(y) = x, \exists! x \in X, \forall y \in Y $ ein totales Alignment. 
+Sei $X$ die Menge aller Satzpositionen des Quellsatzes und $Y$ die Menge aller Satzpositionen des Zielsatzes, dann definiert die Funktion $f\colon Y \rightarrow X$ ein totales Alignment, wobei $y \in Y$ und $x \in X$ als verbunden gelten, wenn $f(y) = x$.
+%Gilt $f(y) = x, \exists! x \in X, \forall y \in Y $, dann ist dieses Alignment total.
 
 Diese totalen Alignments werden mittels des \textit{fast\_align}-Algorithmus \cite{fast_align} generiert.
-Dieser passt durch den EM-Algorithmus ein lexikalisches Übersetzungsmodell an die eingegebenen Satzpaare an \cite{fast_align} und gibt am Ende ein Alignment pro Satz aus.
+Dieser passt durch den EM-Algorithmus ein lexikales Übersetzungsmodell an die eingegebenen Satzpaare an \cite{fast_align} und gibt am Ende ein Alignment pro Satz aus.
 Ein Alignment besteht aus einer Zeile und enthält mehrere Satzpositionspaare welche durch ein Leerzeichen getrennt sind.
 Diese Satzpositionspaare enthalten jeweils eine Satzposition der Quell- und Zielsprache, getrennt durch einen Bindestrich.
 
@@ -260,17 +275,18 @@ Der damit definierte NSST kann Sätze der Quell- in die Zielsprache übersetzen.
 Anhand der Alignments wird ermittelt welche Vokabel der Quellsprache welche 
 Vokabeln der Zielsprache generiert. 
 Für jede Position im Quellsatz lässt sich bestimmen welche Satzpositionen im Zielsatz bereits generiert wurden. 
-Diese Funktion welche eine Quellsatzposition auf eine Menge zusammenhängender Zielsatzpositionen abbildet, nennen wir im Folgenden $Span$.
+Diese Funktion welche eine Quellsatzposition auf eine Menge Zielsatzpositionen abbildet, nennen wir im Folgenden $Span$.
 Sei $G$ eine Funktion, die für eine Quellsatzposition die Menge der durch diese Wortposition generierten Zielsatzpositionen gibt, $\{p_0, p_1,..., p_n\}$ die Menge der Quellsatzpositionen und $\{q_0, q_1,..., q_m\}$ die Menge der Zielsatzpositionen, dann lässt sich  $Span$ wie folgt definieren:
 
 \begin{equation}\notag
     \begin{aligned}
-        Span(p_i) &= \{Span(p_{i-1}) \cup G(p)\} && \forall p \in \{p_1, p_2, .. , p_n\}\\
-        Span(p_0) &= \{G(p_0)\}\\
-        Span(p_n) &= \{q_0, q_1, ... , q_m\}
+        Span(p_i) &=\bigcup\limits_{j  \in \{0, .. , i\}} G(p_j)\\
+        %Span(p_i) &= Span(p_{i-1}) \cup G(p) && i \in \{1, .. , n\}\\
+        %Span(p_0) &= G(p_0)\\
+        %Span(p_n) &= \{q_0, q_1, ... , q_m\}
     \end{aligned}
 \end{equation}
-Die Menge der Zielsatzpositionen einer Quellsatzposition lassen sich in Submengen teilen, sodass jede Submenge alle Positionen zwischen der keinsten und größten enthaltenen Satzposition enthält. Diese Submengen lassen sich durch eben diese kleinste und größte enthaltene Satzposition beschreiben.
+Die Menge der Zielsatzpositionen einer Quellsatzposition lassen sich in Submengen teilen, sodass jede Submenge alle Positionen zwischen der kleinsten und größten enthaltenen Satzposition enthält. Diese Submengen lassen sich durch eben diese kleinste und größte enthaltene Satzposition beschreiben.
 
 \subsection{NSST}
 Die Autoren in \cite{nsst} beschreiben den nichtdeterministischer Streaming-String-Transducer als einen ein Automaten, welcher eine Eingabe ließt und für diese auf der Ausgabe eine Übersetzung generiert.
@@ -287,27 +303,29 @@ Der implementierte NSST lässt sich wie Folgt definieren:
         Q_N &= Q_A \\
         \Sigma_N &= \Sigma_A = \Sigma_H = \{0,1,..., m\} \\
         \Gamma_N &= \{0,1,..., o\} \\
-        X_N &= \{x_1, x_2, ... x_p\} \\
+        X_N &= \{x_1, x_2, ..., x_p\} \\
         x_i &\in \Gamma_N^* \hspace{3cm} \forall x_i \in X_N\\
-        A &\colon X_N \rightarrow (X_N \cup \Gamma_N) \\
-        E_N & \subseteq (Q_N \times \Sigma_N \times A \times Q_N) \\
+        A &\subseteq X_N \rightarrow (X_N \cup \Gamma_N)^*\\
+        %A &\colon X_N \rightarrow (X_N \cup \Gamma_N)^* \\
+        E_N &\subseteq (Q_N \times \Sigma_N \times A \times Q_N) \\
         count &\colon E_N \rightarrow \mathbb{N}\\
-        F_N &\colon Q_N \rightarrow (X_N \cup \Gamma_N)\\
+        F_N &\colon Q_N \rightarrow (X_N \cup \Gamma_N)^*\\
         F_N(q) &= x_1  \hspace{3cm} \forall q \in Q_N\\
     \end{aligned}
 \end{equation}
-
 $Q_N$ ist die endliche Menge an Zuständen und gleicht den Zuständen des aus dem HMM extrahierten WFSA.
 $\Sigma_N$ und $\Gamma_N$ sind die Ein- und Ausgabealphabete. 
 Sie werden durch die endlichen Mengen der Token von Ziel- und Quellsprache repräsentiert. Das Eingabealphabet gleicht dem Alphabet des HMM und des WFSA. 
 Das Ausgabealphabet wird durch den NSST das erste Mal verwendet, hierfür wird auf den Sätzen der Zielsprache ein Alphabet ohne Threshold generiert.
 $X_N$ ist eine endliche Menge von String-Variablen über dem Ausgabealphabet.
-Die Länge wird in der Implementierung nicht explizit definiert, sondern ergibt sich aus den extrahierten Regeln.
-$A$ ist eine Menge von Copyless-Assignments welche Registerinhalte durch Aneinanderreihungen von Registerinhalten und Zielsprachtoken definiert.
+Die Länge wird in der Implementierung nicht explizit definiert, sondern ergibt sich während der Extraktion der Regeln aus der maximalen Menge von Submengen in einem Span.
+$A$ ist eine Menge von Funktionen von $X_N$ nach $(X_N \cup \Gamma_N)^*$, sodass für jede Funktion $f \in A$ gilt, dass jedes Element $x \in X_N$ höchstens einmal in allen Sequenzen der Menge $\{f(y) | y \in X_N\}$ auftritt.
+Somit ist $A$ die Menge der Copyless-Assignments, welche Registerinhalte durch eine Aneinanderreihungen der Registerinhalte und Zielsprachtoken aktualisiert.
+%$A$ ist eine Menge von Copyless-Assignments welche Registerinhalte durch Aneinanderreihungen von Registerinhalten und Zielsprachtoken definiert.
 $E_N$ ist die Menge möglicher Transitionen.
 Eine Transition besteht aus dem aktuellen Zustand, dem gelesenen Token, dem angewendete Assignment und dem daraus resultierenden neuen Zustand.
-Die Funktion $count$ ordnet jedem Assignment eine natürliche Zahl zu.
-Dieser Wert gibt an, wie oft das Assignment aus den Daten extrahiert wurde und wird zur Berechnung der Wahrscheinlichkeit des Assignments benötigt.
+Die Funktion $count$ ordnet jeder Transition eine natürliche Zahl zu.
+Dieser Wert gibt an, wie oft die Transition aus den Daten extrahiert wurde und wird zur Berechnung der Wahrscheinlichkeit der Transition benötigt.
 $q_{-1}$ ist der Startzustand und gleicht dem Startzustand des WFSA.
 $F_N$ ist eine partielle Ausgabefunktion, welche nach dem Lesen der Eingabe abhängig vom Zustand des NSST aus dem Register die Ausgabe generiert.
 In der Implementierung wird unabhängig vom Zustand immer die erste String-Variable des Registers als Ausgabe verwendet.
@@ -337,9 +355,10 @@ Sowohl der NSST als auch der WFSA, beziehungsweise das HMM, verwenden die Token 
 Daher müssen im ersten Schritt die Sätze der Quell- und Zielsprachen mittels der übergebenen Tokenisierungen in eine automatenlesbare Form gebracht werden.
  
 Anschließend wird die Zustandsreihenfolge für den Quellsatz ermittelt.
-Da das implementierte HMM bereits eine Funktion zur Verfügung stellt, die wahrscheinlichste Zustandsreihenfolge für eine Tokenfolge zu ermitteln, wurde in der Implementierung darauf verzichtet diese Reihenfolge mittels dem WFSA zu ermitteln.
+Da das implementierte HMM bereits Funktionen zur Verfügung stellt, die wahrscheinlichste Zustandsreihenfolge für eine Tokenfolge zu ermitteln, wurde in der Implementierung darauf verzichtet diese Reihenfolge mittels dem WFSA zu ermitteln.
 Stattdessen wird, analog zur Extraktion des WFSA aus dem HMM, die durch das HMM errechnete Zustandsfolge um den einheitlich Startzustand $q_{-1}$ ergänzt.
-Unter der Annahme, dass der extrahierte WFSA und das HMM die selbe Sprache erkennen, führt die Verwendung beider Automaten auch zur selben Zustandsreihenfolge.
+Da nach der Definition in Kapitel \ref{abs:WFSA} der extrahierte WFSA und das HMM die selbe Sprache erkennen, führt die Verwendung beider Automaten auch zur selben Zustandsreihenfolge.
+%Unter der Annahme, dass der extrahierte WFSA und das HMM die selbe Sprache erkennen, führt die Verwendung beider Automaten auch zur selben Zustandsreihenfolge.
 
 Eine Transition enthält neben dem Zustandsübergang und dem entsprechenden Token der Quellsprache auch ein Assignment mittels welchem das Register aktualisiert wird.
 In der Implementierung wird dieses generiert, indem alle bereits generierten, direkt aufeinander folgenden Satzpositionen in einer String-Variable konkateniert werden.
@@ -352,7 +371,7 @@ Hierfür werden bereits im Register vorhandene Satzpositionsmengen kopiert und d
 Das Assignment gibt an, in welcher String-Variable welche String-Variablen und welche generierten Token in welcher Reihenfolge konkateniert werden.
 Da jede Satzposition des Zielsprache pro Span nur einmal vorkommen kann, sind die auf diese Weise generierten Assignments implizit copyless.
 
-Ein Beispiel für eine Assignment-Extraktion ist im Anhang zu finden.
+Ein Beispiel für eine Assignment-Extraktion ist im Anhang in Abbildung \ref{fig:example} zu finden.
 
 
 %Zuerst wird für die Regel-Extraktion eine Zustandsreihenfolge für den Quellsatz ermittelt.
@@ -390,7 +409,7 @@ Um die Anzahl der Token stark zu reduzieren wird bei der Erstellung der Tokenisi
 Dieser Wert wurde durch eine stichprobenartige Analyse verschiedener Threshold-Werte ermittelt, somit ist nicht ausgeschlossen, dass auch semantisch relevante Worte fälschlicherweise im kumulativen Token zusammengefasst werden.
 
 Das Gebiet anderer Verfahren Token zusammenzufassen bietet viel Potential für weitere Forschungsarbeiten. 
-So ist es beispielsweise denkbar semantisch weniger interessante und selten vorkommende Worte gezielt anhand der Wortart oder alle konjugierten Formen eines Verbs zu einem Token zusammenzufassen.
+So ist es beispielsweise denkbar semantisch weniger interessante und selten vorkommende Wörter gezielt anhand der Wortart oder alle konjugierten Formen eines Verbs zu einem Token zusammenzufassen.
 
 \subsection{Alignments}
 Die in dieser Arbeit durch den fast\_align-Algorithmus generierten Alignments sind durch die verwendeten Parameter zwingend total.
@@ -404,7 +423,7 @@ Für die Trainingsdaten(TSS=20) werden für 54, 100 als auch 200 Zustände jewei
 Hiervon lesen jeweils knapp 5\% den kumulativen Token 0.
 Für jeden anderen Token gibt es im Schnitt 17 Regeln die unterschiedliche Token der Zielsprache generieren.
 Im Schnitt wurde jede Regel 2 mal generiert.
-Die genauen Zahlen sind im Anhang zu finden.
+Die genauen Zahlen sind in Tabelle \ref{tab:nsst} im Anhang zu finden.
 
 Um die extrahierten Transitionen zu evaluieren wurden die Validierungsdaten mittels der NSST übersetzt.
 Die Funktionalität hierfür ist im \textif{nsst\_translate.py}-Skript implementiert.
@@ -468,6 +487,7 @@ Inwieweit dieses Ergebnisses durch Verbesserungen in den bereits erläuterten Be
         \multicolumn{5}{}{}
     \end{tabular}
     \caption{Auswirkung verschiedener Threshold-Werte auf den deutschen Korpus mit TSS=1}
+    \label{tab:tss1}
 \end{table}
 
 \begin{table}[htbp]
@@ -493,12 +513,14 @@ Inwieweit dieses Ergebnisses durch Verbesserungen in den bereits erläuterten Be
         \multicolumn{5}{}{}
     \end{tabular}
     \caption{Auswirkung verschiedener Threshold-Werte auf den deutschen Korpus mit TSS=20}
+    \label{tab:tss20}
 \end{table}
 
 \begin{figure}[htpb]
-\centering
-\includegraphics[width=3.6in]{img/example.png}
-\caption{Beispiel einer Assignment-Extraction}
+    \centering
+    \includegraphics[width=3.6in]{img/example.png}
+    \caption{Beispiel einer Assignment-Extraction}
+    \label{fig:example}
 \end{figure}
 
 %Quellsatztoken:  1 1 2\\
@@ -540,6 +562,7 @@ Inwieweit dieses Ergebnisses durch Verbesserungen in den bereits erläuterten Be
         \multicolumn{5}{}{}
     \end{tabular}
     \caption{Statistik der extrahierten NSST-Transitionen}
+    \label{tab:nsst}
 \end{table}
 
 
