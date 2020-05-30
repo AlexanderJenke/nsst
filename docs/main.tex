@@ -28,9 +28,12 @@
 
 \maketitle
 \begin{abstract}
-\textcolor{red}{TODO}
+Die Aufgabe dieses Praktikums ist es, die Extraktion eines gewichteten nichtdeterministischen Streaming-String-Transducer (NSST) aus einem bilingualen Europarl-Korpus zu implementieren.
+Hierfür wird der Korpus vorverarbeitet, ein Hidden-Markov-Model (HMM) unsupervised auf der Quellsprache trainert, die totalen Alignments mittels dem fast\_align-Algorithmus bestimmt und abschließend alles kombiniert, um die Transitionen des NSST zu extrahieren. 
+Die Python3-Implementierung führt auf dem deutsch-englischen Europarl-Korpus mit 19440 unterschiedenen Vokabeln in der Quellsprache zu einer Millionen Transitionen.
+Übersetzungen mittels der besten Transitionsreihenfolge des extrahierten NSST erreichen einen BLEU-Score von 0,1.
 
-Der entwickelte Code ist auf \hyperlink{https://github.com/AlexanderJenke/nsst}{GitHub} veröffentlicht.
+Der entwickelte Quellcode ist auf \hyperlink{https://github.com/AlexanderJenke/nsst}{GitHub} veröffentlicht.
 \end{abstract}
 
 \IEEEpeerreviewmaketitle
@@ -62,11 +65,11 @@ Die Aufgabenteile 1,2 und 4 sind vollständig in Python3 implementiert, für Sch
 Wie in Abbildung \ref{Fig:Overview} dargestellt, werden die von Europarl bezogenen Sprachdaten durch das \textit{europarl\_dataloader.py}-Skript entsprechend Aufgabenteil 1 vorbereitet, hierbei werden die Datensätze der Quell- und der Zielsprache unabhängig voneinander verarbeitet.
 Anschließend wird auf den aufbereiteten Europarldaten der Quellsprache mit dem \textit{hmm\_trainings-py}-Skript ein multinomiales Hidden Markov Model trainiert.
 Parallel werden durch das \textit{alignment\_createPairedFile.py}-Skript beide aufbereiteten Sprachdatensätzen in einer Datei kombiniert, aus welcher anschließend mittels dem \textit{fast\_align}-Algorithmus Alignments extrahiert werden.
-Abschließend werden das trainierte HMM, die dabei verwendet Zuordnung von Wörtern und Satzzeichen auf Token (Tokenization), die kombinierte Datei beider Sprachdatensätze sowie die generierten Alignments durch das \textit{nsst\_createRules.py}-Skript kombiniert, um die Regeln eines NSST zu erzeugen.
+Abschließend werden das trainierte HMM, die dabei verwendet Zuordnung von Wörtern und Satzzeichen auf Token (Tokenization), die kombinierte Datei beider Sprachdatensätze sowie die generierten Alignments durch das \textit{nsst\_createRules.py}-Skript kombiniert, um die Transitionen eines NSST zu erzeugen.
 
 \section{Europarl-Korpus}
 \label{Europarl-Korpus}
-Grundlage für Extraktion der NSST-Regeln bildet ein bilingualer Sprachdatensatz des Europarl-Korpus der Version 7.
+Grundlage für die Extraktion der NSST-Regeln bildet ein bilingualer Sprachdatensatz des Europarl-Korpus der Version 7.
 Dieser in \cite{europarl} vorgestellte Korpus enthält bilinguale Daten\-sätze, welche aus den Protokollen der Tagungen des Europäischen Parlamentes extrahiert wurden.
 Diese Protokolle sind in 11 Sprachen verfügbar und 20 der 110 möglichen Datensätze sind veröffentlicht.
 Die Protokolle im Zeitraum von April 1996 bis November 2011 wurden Blockweise aneinander ausgerichtet und in einzelne Sätze zerlegt. 
@@ -124,7 +127,7 @@ E_H &\colon Q_H \times \Sigma_H \rightarrow \mathbb{R}^+ \\
 \end{aligned}
 \end{equation}
 Hierbei ist $Q_H$ eine endliche Menge von Zustände, $\Sigma_H$ eine endliche Menge von Token (Alphabet), $I_H$ die Startwahrscheinlichkeit der Zustände, $T_H$ die Übergangswahrscheinlichkeit von einem Zustand zum nächsten und $E_H$ die Emissionswahrscheinlichkeit eines Token in einem Zustand \cite{hmm->wfsm}. 
-Dabei entspricht $n$ der Anzahl von Zuständen minus eins und $m$ der Anzahl von Token, welche durch die Tokenisierung definiert werden, minus 1.
+Dabei entspricht $n$ der Anzahl von Zuständen minus eins und $m$ der Anzahl von Token, welche durch die Tokenisierung definiert werden, minus eins.
 
 Für das Training werden die Funktionen $I_H$, $T_H$ und $E_H$ des HMMs zufällig initialisiert und anschließend in mehreren Iterationen durch einen EM-Algorithmus auf die Sätze des Trainingsdatensatzes angepasst \cite{hmmTraining}.
 
@@ -196,7 +199,7 @@ Der dritte Summand ergibt sich aus den Emissionswahrscheinlichkeiten $E$.
 Pro Zustand Summieren sich die Wahrscheinlichkeiten aller Token zu eins auf und es bleiben $[n_s * (n_t-1)]$ freie Parameter.\\
 Ist die Anzahl der freien Parameter größer als die Zahl der Datenpunkte, können, wie in \cite{degenerate} für ein anderes Training-Objective beschrieben, nicht mehr alle Parameter bestimmt werden und die Lösung ist degeneriert.
 Da in der verwendeten Implementierung bei Überschreiten dieser Obergrenze eine Warnung ausgegeben wird, dass das Training zu einer degenerierten Lösung führt, ist davon auszugehen, dass der in \cite{degenerate} beschriebene Fall auch für das gegebene Training-Objective gilt.
-Somit führt eine größere Anzahl an Zuständen ab diesem Punkt lediglich zu einen höheren Rechenaufwand ohne neue Informationen in den Zuständen abzubilden.\\
+Somit führt eine größere Anzahl an Zuständen ab diesem Punkt lediglich zu einem höheren Rechenaufwand ohne neue Informationen in den Zuständen abzubilden.\\
 Die Anzahl der Datenpunkte im Datensatz entspricht der Anzahl der Vokabelvorkommen.
 Ein TSS von 20 führt zu 2.518.581 Vokabelvorkommen, ein Threshold von 4 zu 19440 Token. 
 Damit liegt für diese Parameter die Obergrenze der Zustände bei 128. \\
@@ -323,7 +326,7 @@ $A$ ist eine Menge von Funktionen von $X_N$ nach $(X_N \cup \Gamma_N)^*$, sodass
 Somit ist $A$ die Menge der Copyless-Assignments, welche Registerinhalte durch eine Aneinanderreihungen der Registerinhalte und Zielsprachtoken aktualisiert.
 %$A$ ist eine Menge von Copyless-Assignments welche Registerinhalte durch Aneinanderreihungen von Registerinhalten und Zielsprachtoken definiert.
 $E_N$ ist die Menge möglicher Transitionen.
-Eine Transition besteht aus dem aktuellen Zustand, dem gelesenen Token, dem angewendete Assignment und dem daraus resultierenden neuen Zustand.
+Eine Transition besteht aus dem aktuellen Zustand, dem gelesenen Token, dem angewendeten Assignment und dem daraus resultierenden neuen Zustand.
 Die Funktion $count$ ordnet jeder Transition eine natürliche Zahl zu.
 Dieser Wert gibt an, wie oft die Transition aus den Daten extrahiert wurde und wird zur Berechnung der Wahrscheinlichkeit der Transition benötigt.
 $q_{-1}$ ist der Startzustand und gleicht dem Startzustand des WFSA.
@@ -397,7 +400,7 @@ Ein Beispiel für eine Assignment-Extraktion ist im Anhang in Abbildung \ref{fig
 \subsection{Europarl-Korpus}
 \label{korpusprobleme}
 Während der Arbeit mit dem Europarl-Korpus ist aufgefallen, dass die maschinengenerierte Zuordnung der Sätze der Quell- und Zielsprache zueinander teilweise fehlerhaft ist.
-Problematisch ist hierbei, wenn ein Satz in Sprache A einen Nebensatz enthält und diese in Sprache B durch zwei Sätze übersetzt wurde.
+Problematisch ist hierbei, wenn ein Satz in Sprache A einen Nebensatz enthält und dieser in Sprache B durch zwei Sätze übersetzt wurde.
 Da im Europarl-Korpus nur eine 1-zu-1 Zuordnung zwischen Sätzen möglich ist, wird der Satz aus Sprache A nur teilweise Übersetzt und der Verbleibende Satz in Sprache B wird einer leeren Zeile oder einem einzelnen Punkt in Sprache A zugeordnet.
 
 Hiervon sind im verwendeten Trainingsdatensatz (TSS=20) 303 der gesamt 95806 Sätze betroffen, das entspricht lediglich 0.32\% der Sätze. 
@@ -418,17 +421,17 @@ Jedoch führen die in Kapitel \ref{korpusprobleme} erläuterten Probleme des Eur
 Die Qualität der extrahierten Alignments konnte im Rahmen dieser Arbeit nicht beurteilt werden.
 Diese sollte jedoch wegen ihrem direkten Einfluss auf die extrahierten Assignments untersucht und gegebenenfalls optimiert werden. 
 
-\subsection{extrahierte Assignments}
-Für die Trainingsdaten(TSS=20) werden für 54, 100 als auch 200 Zustände jeweils eine Millionen verschiedene Assignments generiert. 
+\subsection{extrahierte Transitionen}
+Für die Trainingsdaten (TSS=20) werden für 54, 100 als auch 200 Zustände jeweils eine Millionen verschiedene Transitionen generiert. 
 Hiervon lesen jeweils knapp 5\% den kumulativen Token 0.
 Für jeden anderen Token gibt es im Schnitt 17 Regeln die unterschiedliche Token der Zielsprache generieren.
 Im Schnitt wurde jede Regel 2 mal generiert.
 Die genauen Zahlen sind in Tabelle \ref{tab:nsst} im Anhang zu finden.
 
-Um die extrahierten Transitionen zu evaluieren wurden die Validierungsdaten mittels der NSST übersetzt.
+Um die extrahierten Transitionen zu evaluieren wurden die Validierungsdaten mittels dem NSST übersetzt.
 Die Funktionalität hierfür ist im \textif{nsst\_translate.py}-Skript implementiert.
 Um den Rechen- und Speicheraufwand der Übersetzung zu reduzieren wurde lediglich die beste Transitionsfolge betrachtet.
-Hierfür wird bei jedem gelesenen Token für jeden erreichbaren Zustand lediglich das Register mit der besten Wahrscheinlichkeit gespeichert.
+Hierfür wird bei jedem gelesenen Token für jeden erreichbaren Zustand nur das Register mit der besten Wahrscheinlichkeit gespeichert.
 Somit müssen bei der Verarbeitung eines gelesenen Token die möglichen Transitionen auf maximal die Menge der Zustände angewendet werden.
 Es wurde auch betrachtet inwieweit die Auswahl anwendbarer Transitionen eine Rolle spielt, so wurden einmal alle Transitionen mit passendem Zustand und Token gewählt und einmal lediglich die Transitionen die neben korrektem Zustand und Token auch exakt die Menge der String-Variablen im übergebenen Register verarbeiten.
 
