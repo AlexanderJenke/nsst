@@ -9,6 +9,7 @@
 - scikit-learn
 - numpy
 - tensorboardX
+- Pillow
 - tqdm
 - nltk >= 3.5
 - pyter3
@@ -43,15 +44,15 @@ The parameters can be modified, for details run the python scripts with the ```-
 ### Data Preprocessing 
 To prepare the europarl data run the following 2 commands:
 ```python3
-python3 europarl_dataloader.py -i output/europarl-v7-de-en.de
-python3 europarl_dataloader.py -i output/europarl-v7-de-en.en
+python3 europarl_dataloader.py -i output/europarl-v7.de-en.de
+python3 europarl_dataloader.py -i output/europarl-v7.de-en.en
 ```
-this will create the *europarl-v7-de-en.de.clean* und *europarl-v7-de-en.en.clean* files in the output directory.
+this will create the *europarl-v7.de-en.de.clean* und *europarl-v7.de-en.en.clean* files in the output directory.
 
 ### Hidden Marcov Model
 To train a Multinomial HMM on the german corpus as source language run 
 ```python3
-python3 hmm_training.py -i output/europarl-v7-de-en.de.clean
+python3 hmm_training.py -i output/europarl-v7.de-en.de.clean
 ```
 this will create the files *hmm_tss20_th4_nSt128_nIt100__[0-100].pkl*,  *hmm_tss20_th4_nSt128_nIt100.pkl* and *tokenization_tss20_th4.pkl* in the output directory as well as a tensorboard log in the runs directory.
 
@@ -67,7 +68,7 @@ Use the provided docker (see packages) or install fast_align from the [Repositor
 
 To before extracting the alignments the sentences need to be prepared by running 
 ```python3
-python3 alignment_createPairedFile.py -src output/europarl-v7-de-en.de.clean -tgt output/europarl-v7-de-en.en.clean
+python3 alignment_createPairedFile.py -src output/europarl-v7.de-en.de.clean -tgt output/europarl-v7.de-en.en.clean
 ```
 this will create the *europarl-v7.de-en.tss20.paired* file in the output directory.
 
@@ -88,3 +89,18 @@ To print the extracted transitions and assignments run
 ```python3
 python3 nsst_printRules.py output/nsst_tss20_th4_nSt200_Q0.pkl
 ```
+
+## Docker
+
+To get te docker run
+``` bash
+docker pull docker.pkg.github.com/alexanderjenke/nsst/nsst:latest
+```
+
+To use the docker run
+``` bash
+docker run -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -it --rm nsst:latest
+```
+
+You will be in the workspace directory containing a clone of this repository.
+fast_align is insalled and acessible from the workspace directory.
