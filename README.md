@@ -55,15 +55,15 @@ python3 hmm_training.py -i output/europarl-v7-de-en.de.clean
 ```
 this will create the files *hmm_tss20_th4_nSt128_nIt100__[0-100].pkl*,  *hmm_tss20_th4_nSt128_nIt100.pkl* and *tokenization_tss20_th4.pkl* in the output directory as well as a tensorboard log in the runs directory.
 
-The *hmm_..._[0-100]* files contain interim states of the hmm.
+The *hmm_..._[0-100].pkl* files contain interim states of the hmm.
 
-The *hmm_..._* file contains the final hmm.
+The *hmm_...pkl* file contains the final hmm.
 
 The *tokenization_tss20_th4.pkl* file contains the used tokenisation to map the source language to a machine readable alphabet.
 
 ### Alignment
 The alignment extraction requires fast_align. 
-Use the provided docker or install fast_align from the [Repository](https://github.com/clab/fast_align).
+Use the provided docker (see packages) or install fast_align from the [Repository](https://github.com/clab/fast_align).
 
 To before extracting the alignments the sentences need to be prepared by running 
 ```python3
